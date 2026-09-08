@@ -247,12 +247,27 @@ function showStepsForCourse() {
 // to the teacher and afterwards in the sheet. Empty lines are marked so
 // they read as "you have not answered this" rather than as blank space.
 function renderSummary() {
+  // "Aðrar stofur" rather than "eftirstandandi": marking a room "hentar
+  // ekki" does not remove it. The backend moves it to the back of the
+  // course's list and pulls it forward again if the course would
+  // otherwise be left with too few rooms (MIN_PREFERRED_ROOMS,
+  // room_preferences.py). Showing a "remaining" count would promise a veto
+  // this is not, and the surprise would land on the one teacher who ends
+  // up in the room they marked.
+  const others = (catalog.get(el('course').value) || [])
+    .map((row) => String(row.room_id || '').trim())
+    .filter((id, index, all) => id && all.indexOf(id) === index)
+    .filter((id) => !state.rooms.has(id));
+
   const rows = [
     ['Vikur', Array.from(state.weeks).sort((a, b) => a - b).join(', ')],
     ['Tímar sem henta', keysWith(state.slots, 'prefer').join(', ')],
     ['Tímar sem henta ekki', keysWith(state.slots, 'avoid').join(', ')],
     ['Stofur sem henta', roomNames(keysWith(state.rooms, 'prefer'))],
-    ['Stofur sem henta ekki', roomNames(keysWith(state.rooms, 'avoid'))]
+    ['Stofur sem henta ekki', roomNames(keysWith(state.rooms, 'avoid'))],
+    ['Aðrar stofur', others.length
+      ? others.length + ': ' + roomNames(others)
+      : '']
   ];
   const target = el('summary');
   target.innerHTML = '';
