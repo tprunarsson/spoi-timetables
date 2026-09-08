@@ -40,10 +40,19 @@
   <!-- Step 2 ------------------------------------------------------------ -->
   <section class="card">
     <h2><span class="step">2</span> Námskeið</h2>
-    <label class="field">
-      <span>Veldu námskeið</span>
-      <select id="course"><option value="">Sæki námskeið…</option></select>
-    </label>
+    <div class="field combo">
+      <span>Leitaðu að námskeiði</span>
+      <!-- The select stays as the value itself, so everything downstream
+           reads el('course').value exactly as before. It is only hidden
+           because 196 courses is a lot of scrolling, not because a
+           dropdown is wrong. -->
+      <select id="course" hidden><option value="">Sæki námskeið…</option></select>
+      <input id="courseSearch" type="search" autocomplete="off"
+             role="combobox" aria-expanded="false" aria-autocomplete="list"
+             aria-controls="courseResults"
+             placeholder="Númer eða heiti, t.d. IÐN508M eða aðgerða">
+      <ul id="courseResults" class="combo-results" role="listbox" hidden></ul>
+    </div>
     <p class="hint" id="courseHint"></p>
   </section>
 

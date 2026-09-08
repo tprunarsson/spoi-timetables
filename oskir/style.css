@@ -291,3 +291,39 @@ textarea { resize: vertical; }
 .more-rooms[open] > summary::before { content: '\2212 '; }
 .more-rooms[open] > summary { margin-bottom: 10px; }
 .more-rooms #roomSearchResults { margin-top: 10px; }
+
+/* --- course combobox ------------------------------------------------ */
+/* The results float over the card rather than pushing it down, so the
+   page does not jump on every keystroke. */
+.combo { position: relative; }
+
+.combo-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.combo-item {
+  padding: 9px 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* .active is the keyboard cursor; hover is the mouse. They look the same
+   on purpose - there is only ever one candidate. */
+.combo-item:hover,
+.combo-item.active { background: var(--accent-soft); color: var(--accent); }
+
+.combo-empty { padding: 9px 11px; font-size: 13px; color: var(--muted); }

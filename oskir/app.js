@@ -189,6 +189,119 @@ function renderSlots() {
   }
 }
 
+// Folded so a teacher can type on any keyboard: "idn" finds IÐN508M and
+// "arnagardur" finds Árnagarður. Matches the folding normalize_room_key
+// does on the Python side - letters are folded, never dropped, or "Oddi"
+// and "Óðinn" would collapse onto each other.
+const FOLD = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ý: 'y',
+               ð: 'd', þ: 'th', æ: 'ae', ö: 'o' };
+
+function fold(value) {
+  return String(value == null ? '' : value).toLowerCase()
+    .replace(/[áéíóúýðþæö]/g, (ch) => FOLD[ch]);
+}
+
+// --- course combobox --------------------------------------------------
+// A <select> of 196 courses is a scroll, not a choice. The select is
+// still the value; this only makes it findable by typing.
+const COURSE_RESULT_LIMIT = 12;
+let courseMatches = [];
+let courseCursor = -1;
+
+function courseLabel(courseId) {
+  const first = (catalog.get(courseId) || [])[0] || {};
+  return courseId + (first.course_name ? ' — ' + first.course_name : '');
+}
+
+function renderCourseResults(open) {
+  const box = el('courseSearch');
+  const list = el('courseResults');
+  const query = fold(box.value.trim());
+  list.innerHTML = '';
+
+  // A query that exactly matches the chosen course means the teacher is
+  // looking at their own selection, not searching - so stay closed.
+  const selected = el('course').value;
+  if (open === false || (selected && box.value === courseLabel(selected))) {
+    courseMatches = [];
+    courseCursor = -1;
+    list.hidden = true;
+    box.setAttribute('aria-expanded', 'false');
+    return;
+  }
+
+  courseMatches = Array.from(catalog.keys())
+    .filter((courseId) => !query || fold(courseLabel(courseId)).indexOf(query) >= 0)
+    .sort()
+    .slice(0, COURSE_RESULT_LIMIT);
+  courseCursor = -1;
+
+  if (courseMatches.length === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'combo-empty';
+    empty.textContent = catalog.size
+      ? 'Ekkert námskeið fannst.'
+      : 'Engin námskeið skráð fyrir þetta svið enn.';
+    list.appendChild(empty);
+  } else {
+    courseMatches.forEach((courseId, index) => {
+      const item = document.createElement('li');
+      item.className = 'combo-item';
+      item.setAttribute('role', 'option');
+      item.textContent = courseLabel(courseId);
+      // mousedown, not click: blur would close the list first.
+      item.onmousedown = (event) => {
+        if (event && event.preventDefault) event.preventDefault();
+        pickCourse(courseId);
+      };
+      item.onclick = () => pickCourse(courseId);
+      item.dataset.index = String(index);
+      list.appendChild(item);
+    });
+  }
+  list.hidden = false;
+  box.setAttribute('aria-expanded', 'true');
+}
+
+function highlightCourse(next) {
+  if (courseMatches.length === 0) return;
+  const items = Array.from(el('courseResults').children);
+  courseCursor = (next + courseMatches.length) % courseMatches.length;
+  items.forEach((item, index) => {
+    item.className = 'combo-item' + (index === courseCursor ? ' active' : '');
+  });
+}
+
+function onCourseKeydown(event) {
+  const key = event && event.key;
+  if (key === 'ArrowDown') { highlightCourse(courseCursor + 1); event.preventDefault(); }
+  else if (key === 'ArrowUp') { highlightCourse(courseCursor - 1); event.preventDefault(); }
+  else if (key === 'Enter') {
+    // With nothing highlighted, a single match is unambiguous - Enter
+    // takes it rather than making the teacher arrow down to it first.
+    const pick = courseCursor >= 0 ? courseMatches[courseCursor]
+      : (courseMatches.length === 1 ? courseMatches[0] : null);
+    if (pick) { pickCourse(pick); event.preventDefault(); }
+  } else if (key === 'Escape') {
+    renderCourseResults(false);
+  }
+}
+
+function pickCourse(courseId) {
+  el('course').value = courseId;
+  el('courseSearch').value = courseLabel(courseId);
+  renderCourseResults(false);
+  onCourseChange();
+}
+
+function onCourseChange() {
+  state.rooms.clear();
+  // Extras belong to the course they were chosen for.
+  extraRooms.clear();
+  el('roomSearch').value = '';
+  showStepsForCourse();
+}
+
 // Every room this course may be given: the prefill's own list plus
 // anything the teacher searched for and added.
 function courseRoomRows() {
@@ -272,7 +385,7 @@ function renderRooms() {
 // result, it is the catalogue again.
 function renderRoomSearch() {
   const target = el('roomSearchResults');
-  const query = el('roomSearch').value.trim().toLowerCase();
+  const query = fold(el('roomSearch').value.trim());
   target.innerHTML = '';
   if (query.length < 2) return;
 
@@ -280,7 +393,7 @@ function renderRoomSearch() {
   const matches = [];
   let alreadyListed = 0;
   allRooms.forEach((row, roomId) => {
-    const haystack = ((row.room_name || '') + ' ' + (row.building || '')).toLowerCase();
+    const haystack = fold((row.room_name || '') + ' ' + (row.building || ''));
     if (haystack.indexOf(query) < 0) return;
     if (shown.has(roomId)) { alreadyListed++; return; }
     if (matches.length < 24) matches.push(row);
@@ -374,6 +487,8 @@ async function loadCatalog() {
   allRooms.clear();
   extraRooms.clear();
   state.rooms.clear();
+  el('courseSearch').value = '';
+  renderCourseResults(false);
 
   try {
     const response = await fetch(CONFIG.apiUrl + '?school=' + encodeURIComponent(school));
@@ -463,14 +578,18 @@ renderSlots();
 loadCatalog();
 
 el('school').addEventListener('change', loadCatalog);
-el('course').addEventListener('change', () => {
-  state.rooms.clear();
-  // Extras belong to the course they were chosen for.
-  extraRooms.clear();
-  el('roomSearch').value = '';
-  showStepsForCourse();
-});
+el('course').addEventListener('change', onCourseChange);
 el('roomSearch').addEventListener('input', renderRoomSearch);
+el('courseSearch').addEventListener('input', () => renderCourseResults());
+el('courseSearch').addEventListener('focus', () => renderCourseResults());
+el('courseSearch').addEventListener('keydown', onCourseKeydown);
+// Half-typed text left in the box would claim a course that was never
+// selected, so leaving the field snaps it back to what is actually set.
+el('courseSearch').addEventListener('blur', () => {
+  const selected = el('course').value;
+  el('courseSearch').value = selected ? courseLabel(selected) : '';
+  renderCourseResults(false);
+});
 el('submitBtn').addEventListener('click', submit);
 
 document.querySelectorAll('[data-weeks]').forEach((button) => {
