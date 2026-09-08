@@ -48,6 +48,14 @@ const CONFIG = {
 
 // course_id -> its catalog rows, filled by the one GET below.
 const catalog = new Map();
+// room_id -> room row, every room in the school. The catalog GET already
+// returns every row, so searching outside a course's own list costs no
+// extra request - only a second index over data already in memory.
+const allRooms = new Map();
+// Rooms the teacher searched for and added, which are NOT on this
+// course's own list. Kept apart so they can be shown as such: the prefill
+// did not propose them, and that is worth seeing.
+const extraRooms = new Set();
 
 const state = {
   weeks: new Set(),
@@ -181,9 +189,56 @@ function renderSlots() {
   }
 }
 
+// Every room this course may be given: the prefill's own list plus
+// anything the teacher searched for and added.
+function courseRoomRows() {
+  const rows = (catalog.get(el('course').value) || []).slice();
+  const seen = new Set(rows.map((row) => String(row.room_id || '').trim()));
+  extraRooms.forEach((roomId) => {
+    if (!seen.has(roomId) && allRooms.has(roomId)) rows.push(allRooms.get(roomId));
+  });
+  return rows;
+}
+
+function roomButton(row, isExtra) {
+  const roomId = String(row.room_id || '').trim();
+  const value = state.rooms.get(roomId);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'room-btn'
+    + (value === 'prefer' ? ' preferred' : '')
+    + (value === 'avoid' ? ' blocked' : '');
+
+  const name = document.createElement('span');
+  name.className = 'room-name';
+  name.textContent = row.room_name || roomId;
+
+  const meta = document.createElement('span');
+  meta.className = 'room-meta';
+  const bits = [row.building, row.capacity ? row.capacity + ' sæti' : ''].filter(Boolean);
+  meta.textContent = bits.join(' · ')
+    + (isExtra ? ' · utan lista' : '')
+    + (value === 'prefer' ? ' — hentar vel' : (value === 'avoid' ? ' — hentar ekki' : ''));
+
+  button.append(name, meta);
+  button.onclick = () => {
+    const changed = cycle(state.rooms, roomId, CONFIG.maxRoomPicks, CONFIG.maxRoomPicks);
+    if (!changed) {
+      setStatus('Í mesta lagi ' + CONFIG.maxRoomPicks + ' stofur af hvoru.', 'err');
+      return;
+    }
+    setStatus('');
+    if (isExtra) extraRooms.add(roomId);
+    renderRooms();
+    renderRoomSearch();
+    renderSummary();
+  };
+  return button;
+}
+
 function renderRooms() {
   const target = el('roomList');
-  const rows = catalog.get(el('course').value) || [];
+  const rows = courseRoomRows();
   target.innerHTML = '';
 
   if (rows.length === 0) {
@@ -195,38 +250,15 @@ function renderRooms() {
     return;
   }
 
+  // A room the teacher searched in is marked as such, so the list never
+  // implies the prefill proposed it.
+  const courseRoomIds = new Set(
+    (catalog.get(el('course').value) || []).map((row) => String(row.room_id || '').trim())
+  );
   rows.forEach((row) => {
     const roomId = String(row.room_id || '').trim();
     if (!roomId) return;
-    const value = state.rooms.get(roomId);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'room-btn'
-      + (value === 'prefer' ? ' preferred' : '')
-      + (value === 'avoid' ? ' blocked' : '');
-
-    const name = document.createElement('span');
-    name.className = 'room-name';
-    name.textContent = row.room_name || roomId;
-
-    const meta = document.createElement('span');
-    meta.className = 'room-meta';
-    const bits = [row.building, row.capacity ? row.capacity + ' sæti' : ''].filter(Boolean);
-    meta.textContent = bits.join(' · ')
-      + (value === 'prefer' ? ' — hentar vel' : (value === 'avoid' ? ' — hentar ekki' : ''));
-
-    button.append(name, meta);
-    button.onclick = () => {
-      const changed = cycle(state.rooms, roomId, CONFIG.maxRoomPicks, CONFIG.maxRoomPicks);
-      if (!changed) {
-        setStatus('Í mesta lagi ' + CONFIG.maxRoomPicks + ' stofur af hvoru.', 'err');
-        return;
-      }
-      setStatus('');
-      renderRooms();
-      renderSummary();
-    };
-    target.appendChild(button);
+    target.appendChild(roomButton(row, !courseRoomIds.has(roomId)));
   });
 
   el('roomCount').textContent =
@@ -234,11 +266,46 @@ function renderRooms() {
     + countOf(state.rooms, 'avoid') + ' henta ekki.';
 }
 
+// Rooms anywhere in the school matching the query, minus the ones this
+// course already offers. Capped: a bare "V" would otherwise render every
+// room in VR-I, II and III at once, and a list that long is not a search
+// result, it is the catalogue again.
+function renderRoomSearch() {
+  const target = el('roomSearchResults');
+  const query = el('roomSearch').value.trim().toLowerCase();
+  target.innerHTML = '';
+  if (query.length < 2) return;
+
+  const shown = new Set(courseRoomRows().map((row) => String(row.room_id || '').trim()));
+  const matches = [];
+  let alreadyListed = 0;
+  allRooms.forEach((row, roomId) => {
+    const haystack = ((row.room_name || '') + ' ' + (row.building || '')).toLowerCase();
+    if (haystack.indexOf(query) < 0) return;
+    if (shown.has(roomId)) { alreadyListed++; return; }
+    if (matches.length < 24) matches.push(row);
+  });
+
+  if (matches.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    // "Engin stofa fannst" would be a lie the moment a teacher searches
+    // for a room that is already above - which is exactly what happens
+    // right after adding one, since the query is still in the box.
+    empty.textContent = alreadyListed
+      ? 'Sú stofa er þegar á listanum að ofan.'
+      : 'Engin stofa fannst.';
+    target.appendChild(empty);
+    return;
+  }
+  matches.forEach((row) => target.appendChild(roomButton(row, true)));
+}
+
 function showStepsForCourse() {
   const chosen = !!el('course').value;
   ['weeksCard', 'timesCard', 'roomsCard', 'noteCard', 'summaryCard', 'submitCard']
     .forEach((id) => { el(id).hidden = !chosen; });
-  if (chosen) { renderRooms(); renderSummary(); }
+  if (chosen) { renderRooms(); renderRoomSearch(); renderSummary(); }
 }
 
 // What the page will actually send, in words, immediately above the
@@ -304,6 +371,8 @@ async function loadCatalog() {
   const select = el('course');
   select.innerHTML = '<option value="">Sæki námskeið…</option>';
   catalog.clear();
+  allRooms.clear();
+  extraRooms.clear();
   state.rooms.clear();
 
   try {
@@ -316,6 +385,12 @@ async function loadCatalog() {
       if (!courseId) return;
       if (!catalog.has(courseId)) catalog.set(courseId, []);
       catalog.get(courseId).push(row);
+
+      // The same row indexed a second way. A room appears once per course
+      // that uses it, so the first sighting wins and the rest collapse
+      // onto it - this index is about the room, not the course.
+      const roomId = String(row.room_id || '').trim();
+      if (roomId && !allRooms.has(roomId)) allRooms.set(roomId, row);
     });
 
     select.innerHTML = '<option value="">Veldu námskeið…</option>';
@@ -388,7 +463,14 @@ renderSlots();
 loadCatalog();
 
 el('school').addEventListener('change', loadCatalog);
-el('course').addEventListener('change', () => { state.rooms.clear(); showStepsForCourse(); });
+el('course').addEventListener('change', () => {
+  state.rooms.clear();
+  // Extras belong to the course they were chosen for.
+  extraRooms.clear();
+  el('roomSearch').value = '';
+  showStepsForCourse();
+});
+el('roomSearch').addEventListener('input', renderRoomSearch);
 el('submitBtn').addEventListener('click', submit);
 
 document.querySelectorAll('[data-weeks]').forEach((button) => {

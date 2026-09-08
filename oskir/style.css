@@ -3,42 +3,77 @@
    tri-state colours for a slot. A teacher who has seen one should not have
    to learn the other. */
 :root {
-  --bg: #f8fafc;
+  --bg: #f6f8fb;
   --surface: #ffffff;
-  --border: #e2e8f0;
+  --border: #e6ebf2;
   --border-strong: #cbd5e1;
   --text: #0f172a;
   --muted: #64748b;
   --accent: #2563eb;
-  --accent-soft: #dbeafe;
-  --prefer: #16a34a;
-  --prefer-soft: #dcfce7;
-  --avoid: #dc2626;
-  --avoid-soft: #fee2e2;
-  --radius: 10px;
+  --accent-soft: #e8f0fe;
+  --prefer: #15803d;
+  --prefer-soft: #e7f8ed;
+  --avoid: #be123c;
+  --avoid-soft: #fdeef1;
+  --radius: 14px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, .06);
+  --ring: 0 0 0 3px rgba(37, 99, 235, .18);
+}
+
+/* Respects the reader's own setting rather than imposing one - a teacher
+   filling this in on a phone in a dark room should not be flashbanged. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --surface: #131c2e;
+    --border: #24304a;
+    --border-strong: #35425f;
+    --text: #e8edf6;
+    --muted: #9aa8bf;
+    --accent: #6ea8fe;
+    --accent-soft: #1c2a45;
+    --prefer: #58d68d;
+    --prefer-soft: #16301f;
+    --avoid: #f87f96;
+    --avoid-soft: #35161f;
+    --shadow-sm: none;
+    --shadow-md: 0 4px 18px rgba(0, 0, 0, .35);
+    --ring: 0 0 0 3px rgba(110, 168, 254, .25);
+  }
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  padding: 24px 16px 64px;
+  padding: 32px 16px 72px;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Every interactive element gets the same visible focus ring. Keyboard
+   users have to be able to see where they are in a form of ~70 buttons. */
+:where(button, select, input, textarea, summary, a):focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 8px;
 }
 
 main, .page-head { max-width: 900px; margin: 0 auto; }
 
-.page-head h1 { margin: 0 0 6px; font-size: 24px; }
+.page-head h1 { margin: 0 0 6px; font-size: clamp(22px, 4vw, 28px); letter-spacing: -.02em; }
 .lede { margin: 0 0 20px; color: var(--muted); max-width: 62ch; }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
-  margin-bottom: 16px;
+  padding: 20px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
 }
 
 .card h2 {
@@ -51,6 +86,7 @@ main, .page-head { max-width: 900px; margin: 0 auto; }
 
 .step {
   display: inline-flex;
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, .18);
   align-items: center;
   justify-content: center;
   width: 22px;
@@ -74,15 +110,18 @@ main, .page-head { max-width: 900px; margin: 0 auto; }
 .field > span { color: var(--muted); }
 .field small { font-weight: 400; }
 
-select, input[type="text"], input[type="email"], textarea {
+select, input[type="text"], input[type="email"], input[type="search"], textarea {
   font: inherit;
-  padding: 8px 10px;
+  padding: 9px 12px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--text);
   width: 100%;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
+
+select:hover, input:hover, textarea:hover { border-color: var(--accent); }
 
 textarea { resize: vertical; }
 
@@ -91,14 +130,18 @@ textarea { resize: vertical; }
 
 .week-btn {
   font: inherit;
-  min-width: 44px;
-  padding: 7px 8px;
+  min-width: 46px;
+  padding: 8px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
 }
+
+.week-btn:hover { border-color: var(--accent); }
+.week-btn:active { transform: scale(.94); }
 
 .week-btn.selected {
   background: var(--accent);
@@ -138,12 +181,16 @@ textarea { resize: vertical; }
   font-size: 11px;
   padding: 9px 2px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  min-height: 34px;
+  min-height: 36px;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
 }
+
+.slot-btn:hover { border-color: var(--accent); }
+.slot-btn:active { transform: scale(.93); }
 
 .slot-btn.preferred { background: var(--prefer-soft); border-color: var(--prefer); color: var(--prefer); font-weight: 600; }
 .slot-btn.blocked   { background: var(--avoid-soft);  border-color: var(--avoid);  color: var(--avoid);  font-weight: 600; }
@@ -153,16 +200,23 @@ textarea { resize: vertical; }
 
 .room-btn {
   font: inherit;
+  color: var(--text);
   text-align: left;
-  padding: 9px 11px;
+  padding: 11px 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  text-decoration: none;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease,
+              box-shadow .15s ease;
 }
+
+.room-btn:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
+.room-btn:active { transform: scale(.985); }
 
 .room-btn .room-name { font-weight: 600; font-size: 14px; }
 .room-btn .room-meta { font-size: 12px; color: var(--muted); }
@@ -177,14 +231,20 @@ textarea { resize: vertical; }
 
 .primary {
   font: inherit;
+  font-size: 15px;
   font-weight: 600;
-  padding: 10px 20px;
+  padding: 12px 26px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--accent);
   color: #fff;
   cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: transform .08s ease, filter .15s ease;
 }
+
+.primary:hover:not(:disabled) { filter: brightness(1.06); }
+.primary:active:not(:disabled) { transform: translateY(1px); }
 
 .primary:disabled { opacity: .55; cursor: default; }
 
@@ -207,3 +267,27 @@ textarea { resize: vertical; }
 .summary-label { color: var(--muted); flex: 0 0 120px; }
 .summary-value { flex: 1; }
 .summary-value.empty { color: var(--avoid); }
+
+/* --- search beyond the course's own list ---------------------------- */
+/* Collapsed by default: most teachers want one of the rooms already
+   offered, and an open search box invites treating the curated list as
+   optional. Opening it is a deliberate act. */
+.more-rooms {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.more-rooms > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  list-style: none;
+}
+
+.more-rooms > summary::-webkit-details-marker { display: none; }
+.more-rooms > summary::before { content: '+ '; }
+.more-rooms[open] > summary::before { content: '\2212 '; }
+.more-rooms[open] > summary { margin-bottom: 10px; }
+.more-rooms #roomSearchResults { margin-top: 10px; }
