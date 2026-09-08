@@ -1,0 +1,197 @@
+/* Deliberately close to Spoi's own dialogs (TeacherRequest.html,
+   Stundatoflur.html): same neutral surface, same blue accent, same
+   tri-state colours for a slot. A teacher who has seen one should not have
+   to learn the other. */
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-soft: #dbeafe;
+  --prefer: #16a34a;
+  --prefer-soft: #dcfce7;
+  --avoid: #dc2626;
+  --avoid-soft: #fee2e2;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px 16px 64px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+main, .page-head { max-width: 900px; margin: 0 auto; }
+
+.page-head h1 { margin: 0 0 6px; font-size: 24px; }
+.lede { margin: 0 0 20px; color: var(--muted); max-width: 62ch; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.hint { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.hint b { font-weight: 600; }
+
+.swatch-prefer { color: var(--prefer); }
+.swatch-avoid { color: var(--avoid); }
+
+.field-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 220px; font-size: 13px; }
+.field > span { color: var(--muted); }
+.field small { font-weight: 400; }
+
+select, input[type="text"], input[type="email"], textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+
+textarea { resize: vertical; }
+
+/* --- weeks --------------------------------------------------------- */
+.week-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.week-btn {
+  font: inherit;
+  min-width: 44px;
+  padding: 7px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.week-btn.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.toolbar { margin-top: 10px; display: flex; gap: 14px; }
+
+.link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* --- slot grid ----------------------------------------------------- */
+/* One column per weekday plus a time gutter, mirroring Spoi's own
+   slotGrid so the layout reads the same way. */
+.slot-grid {
+  display: grid;
+  grid-template-columns: 68px repeat(5, 1fr);
+  gap: 4px;
+  min-width: 460px;
+  overflow-x: auto;
+}
+
+.slot-head { font-size: 12px; font-weight: 600; text-align: center; color: var(--muted); padding: 4px 0; }
+.slot-time { font-size: 11px; color: var(--muted); display: flex; align-items: center; }
+
+.slot-btn {
+  font: inherit;
+  font-size: 11px;
+  padding: 9px 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  min-height: 34px;
+}
+
+.slot-btn.preferred { background: var(--prefer-soft); border-color: var(--prefer); color: var(--prefer); font-weight: 600; }
+.slot-btn.blocked   { background: var(--avoid-soft);  border-color: var(--avoid);  color: var(--avoid);  font-weight: 600; }
+
+/* --- rooms --------------------------------------------------------- */
+.room-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+
+.room-btn {
+  font: inherit;
+  text-align: left;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.room-btn .room-name { font-weight: 600; font-size: 14px; }
+.room-btn .room-meta { font-size: 12px; color: var(--muted); }
+
+.room-btn.preferred { background: var(--prefer-soft); border-color: var(--prefer); }
+.room-btn.blocked   { background: var(--avoid-soft);  border-color: var(--avoid); }
+.room-btn.preferred .room-meta,
+.room-btn.blocked .room-meta { color: inherit; }
+
+/* --- submit -------------------------------------------------------- */
+.submit-card { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+.primary {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.primary:disabled { opacity: .55; cursor: default; }
+
+.status { margin: 0; font-size: 13px; color: var(--muted); }
+.status.ok { color: var(--prefer); font-weight: 600; }
+.status.err { color: var(--avoid); font-weight: 600; }
+
+@media (max-width: 560px) {
+  .slot-grid { grid-template-columns: 56px repeat(5, 1fr); min-width: 420px; }
+}
