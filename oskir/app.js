@@ -14,7 +14,7 @@
 
 const CONFIG = {
   // Apps Script web app, deployed "Execute as: Me" / "Anyone".
-  apiUrl: 'https://script.google.com/macros/s/AKfycbxis6RKmDpbxs3CylT2QVmVZamkbs9qyncTt-tW-E1g_KU2aB_JLbFI79dIxbeIGl0D/exec',
+  apiUrl: 'https://script.google.com/macros/s/AKfycbzgHtN6imSwNb9QPJBMKMC7IonETyfbCZ3vAyGTyfBg3DiqW5Ls5Ocm4zsRT-WN1hW9/exec',
 
   schools: [
     { value: 'von', label: 'VoN - Verkfræði- og náttúruvísindasvið' },
