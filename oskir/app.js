@@ -141,6 +141,7 @@ function renderWeeks() {
       if (state.weeks.has(week)) state.weeks.delete(week);
       else state.weeks.add(week);
       renderWeeks();
+      renderSummary();
     };
     target.appendChild(button);
   }
@@ -174,7 +175,7 @@ function renderSlots() {
         + (value === 'avoid' ? ' blocked' : '');
       button.textContent = value === 'prefer' ? 'Hentar' : (value === 'avoid' ? 'Ekki' : '');
       button.title = day.label + ' ' + slotLabel(slot);
-      button.onclick = () => { cycle(state.slots, token); renderSlots(); };
+      button.onclick = () => { cycle(state.slots, token); renderSlots(); renderSummary(); };
       target.appendChild(button);
     });
   }
@@ -223,6 +224,7 @@ function renderRooms() {
       }
       setStatus('');
       renderRooms();
+      renderSummary();
     };
     target.appendChild(button);
   });
@@ -234,9 +236,50 @@ function renderRooms() {
 
 function showStepsForCourse() {
   const chosen = !!el('course').value;
-  ['weeksCard', 'timesCard', 'roomsCard', 'noteCard', 'submitCard']
+  ['weeksCard', 'timesCard', 'roomsCard', 'noteCard', 'summaryCard', 'submitCard']
     .forEach((id) => { el(id).hidden = !chosen; });
-  if (chosen) renderRooms();
+  if (chosen) { renderRooms(); renderSummary(); }
+}
+
+// What the page will actually send, in words, immediately above the
+// button. A tri-state button says nothing about the payload, and a
+// submission carrying no selections looks exactly like a good one - both
+// to the teacher and afterwards in the sheet. Empty lines are marked so
+// they read as "you have not answered this" rather than as blank space.
+function renderSummary() {
+  const rows = [
+    ['Vikur', Array.from(state.weeks).sort((a, b) => a - b).join(', ')],
+    ['Tímar sem henta', keysWith(state.slots, 'prefer').join(', ')],
+    ['Tímar sem henta ekki', keysWith(state.slots, 'avoid').join(', ')],
+    ['Stofur sem henta', roomNames(keysWith(state.rooms, 'prefer'))],
+    ['Stofur sem henta ekki', roomNames(keysWith(state.rooms, 'avoid'))]
+  ];
+  const target = el('summary');
+  target.innerHTML = '';
+  rows.forEach(([label, value]) => {
+    const row = document.createElement('div');
+    row.className = 'summary-row';
+    const l = document.createElement('span');
+    l.className = 'summary-label';
+    l.textContent = label;
+    const v = document.createElement('span');
+    v.className = 'summary-value' + (value ? '' : ' empty');
+    v.textContent = value || 'ekkert valið';
+    row.append(l, v);
+    target.appendChild(row);
+  });
+}
+
+// Room ids are what gets submitted, but they mean nothing to a reader -
+// show the names the teacher actually clicked.
+function roomNames(roomIds) {
+  const rows = catalog.get(el('course').value) || [];
+  return roomIds
+    .map((id) => {
+      const row = rows.filter((r) => String(r.room_id) === String(id))[0];
+      return row ? (row.room_name || id) : id;
+    })
+    .join(', ');
 }
 
 /* ---------- data -------------------------------------------------- */
@@ -341,5 +384,6 @@ document.querySelectorAll('[data-weeks]').forEach((button) => {
       for (let week = range.from; week <= range.to; week++) state.weeks.add(week);
     }
     renderWeeks();
+    renderSummary();
   });
 });

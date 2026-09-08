@@ -195,3 +195,15 @@ textarea { resize: vertical; }
 @media (max-width: 560px) {
   .slot-grid { grid-template-columns: 56px repeat(5, 1fr); min-width: 420px; }
 }
+
+/* --- summary -------------------------------------------------------- */
+/* Nothing about a tri-state button says what the page will actually
+   SEND, and a submission that silently carried no selections looks
+   identical to a successful one. This is the last thing read before the
+   button, so an empty line is noticed before it becomes an empty column
+   in the sheet. */
+.summary { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.summary-row { display: flex; gap: 8px; }
+.summary-label { color: var(--muted); flex: 0 0 120px; }
+.summary-value { flex: 1; }
+.summary-value.empty { color: var(--avoid); }
