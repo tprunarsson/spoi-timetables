@@ -31,8 +31,13 @@
         <input id="email" type="email" placeholder="nafn@hi.is" autocomplete="email">
       </label>
       <label class="field">
-        <span>Kennitala <small>(valfrjálst)</small></span>
-        <input id="ssn" type="text" inputmode="numeric" placeholder="DDMMYYXXXX">
+        <!-- Required, not politeness: teachers.username embeds the
+             kennitala, so it is the only thing that ties a wish to a
+             teacher and their sessions. A wish without one cannot be
+             imported into Spoi at all. -->
+        <span>Kennitala</span>
+        <input id="ssn" type="text" inputmode="numeric" required
+               pattern="[0-9]{10}" maxlength="10" placeholder="DDMMYYXXXX">
       </label>
     </div>
   </section>

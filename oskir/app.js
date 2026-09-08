@@ -531,11 +531,22 @@ async function submit() {
   const courseId = el('course').value;
   if (!courseId) { setStatus('Veldu námskeið fyrst.', 'err'); return; }
 
+  // Ten digits, no separators. Spoi joins a wish to a teacher through the
+  // kennitala embedded in teachers.username - without it the submission
+  // reaches the sheet and then has nothing to attach to, which looks like
+  // a successful answer that quietly never arrives.
+  const ssn = el('ssn').value.replace(/[\s-]/g, '');
+  if (!/^\d{10}$/.test(ssn)) {
+    setStatus('Sláðu inn kennitölu (10 tölustafir) - án hennar ratar óskin ekki á rétt námskeið.', 'err');
+    el('ssn').focus();
+    return;
+  }
+
   const payload = {
     school: el('school').value,
     course_id: courseId,
     teacher_email: el('email').value.trim(),
-    teacher_ssn: el('ssn').value.trim(),
+    teacher_ssn: ssn,
     prefer_rooms: keysWith(state.rooms, 'prefer'),
     avoid_rooms: keysWith(state.rooms, 'avoid'),
     prefer_times: keysWith(state.slots, 'prefer'),
