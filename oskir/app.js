@@ -30,9 +30,8 @@ const CONFIG = {
   // while week 34 is the same Monday for everyone. The cost is that the
   // number is unfamiliar, which is why every button carries its date.
   weeks: { from: 34, to: 47 },
-  // The year those week numbers belong to. Override with ?year=2027 for a
-  // spring term that runs into the next calendar year.
-  year: new Date().getFullYear(),
+  // The year is derived from the week range rather than set here - see
+  // resolveYear. Override with ?year=2027 to force one.
 
   // Slot 0 starts 08:20 and each slot is 50 minutes - the same constants
   // Spoi uses (SLOT_ZERO_START_MINUTES / SLOT_STEP_MINUTES, Code.js), so
@@ -90,10 +89,35 @@ function weekRangeFromQuery() {
   return { from: Number(match[1]), to: Number(match[2]) };
 }
 
-function yearFromQuery() {
+/* Which year's weeks these are.
+ *
+ * "This year" is wrong half the time: wishes are collected months before
+ * the term they describe, so spring weeks 2-16 gathered in autumn belong
+ * to NEXT year, and showing this year's dates would be a year out - the
+ * exact mistake the dates were added to prevent.
+ *
+ * So the range picks its own year: whichever one it has not finished in
+ * yet. Autumn 34-47 read in September resolves to this year (week 47 is
+ * still ahead); read in December it rolls to next year, because this
+ * year's term is over and the only wishes anyone can still submit are for
+ * the next one. Spring 2-16 read at any point after April rolls the same
+ * way. Nothing to update annually, and nothing to forget.
+ */
+function resolveYear(range, today) {
   const raw = new URLSearchParams(location.search).get('year');
-  const year = parseInt(raw, 10);
-  return year >= 2000 && year <= 2100 ? year : CONFIG.year;
+  const forced = parseInt(raw, 10);
+  if (forced >= 2000 && forced <= 2100) return forced;
+
+  const now = today || new Date();
+  const thisYear = now.getUTCFullYear();
+  // End of the range's last week, not its Monday: a term in progress must
+  // not jump forward while it is still running.
+  const endOfRange = mondayOfIsoWeek(thisYear, range.to).getTime() + 7 * 86400000;
+  return endOfRange < now.getTime() ? thisYear + 1 : thisYear;
+}
+
+function yearFromQuery() {
+  return resolveYear(weekRangeFromQuery());
 }
 
 // Monday of an ISO week. ISO week 1 is the one containing 4 January, so
