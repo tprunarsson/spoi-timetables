@@ -344,3 +344,7 @@ textarea { resize: vertical; }
 .week-no { font-weight: 600; }
 .week-date { font-size: 10px; opacity: .65; font-variant-numeric: tabular-nums; }
 .week-btn.selected .week-date { opacity: .85; }
+
+/* Not an error yet - the teacher has simply not finished. Amber rather
+   than red, and only on the count that is short. */
+.hint-warn { color: var(--avoid); font-weight: 600; }

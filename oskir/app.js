@@ -49,7 +49,18 @@ const CONFIG = {
     { token: 'fös', label: 'Fös' }
   ],
 
-  maxRoomPicks: 3
+  // A teacher may name at most this many favourites. Ranking ten rooms
+  // "best" is not a ranking, so this stays capped even though a green
+  // room counts as open below.
+  maxPreferPicks: 3,
+
+  // The real rule. Vetoing is unlimited as long as this many rooms are
+  // left usable - green or blank both count. A course reduced to one
+  // option is not a preference, it is a booking, and it leaves Besta
+  // nothing to solve with. If the offered list is shorter than this, the
+  // teacher has to search for more rather than being let off the floor:
+  // a small list is exactly when the alternatives matter most.
+  minOpenRooms: 5
 };
 
 // course_id -> its catalog rows, filled by the one GET below.
@@ -412,9 +423,17 @@ function roomButton(row, isExtra) {
 
   button.append(name, meta);
   button.onclick = () => {
-    const changed = cycle(state.rooms, roomId, CONFIG.maxRoomPicks, CONFIG.maxRoomPicks);
+    const current = state.rooms.get(roomId);
+    // Refused at the click rather than at submit: a teacher who has to
+    // undo six vetoes at the end has been let down by the form.
+    if (!current && openRoomCount() <= CONFIG.minOpenRooms) {
+      setStatus('Minnst ' + CONFIG.minOpenRooms + ' stofur verða að standa eftir. '
+        + 'Leitaðu að fleiri stofum ef þessar henta ekki.', 'err');
+      return;
+    }
+    const changed = cycle(state.rooms, roomId, CONFIG.maxPreferPicks, null);
     if (!changed) {
-      setStatus('Í mesta lagi ' + CONFIG.maxRoomPicks + ' stofur af hvoru.', 'err');
+      setStatus('Í mesta lagi ' + CONFIG.maxPreferPicks + ' stofur merktar "hentar vel".', 'err');
       return;
     }
     setStatus('');
@@ -424,6 +443,19 @@ function roomButton(row, isExtra) {
     renderSummary();
   };
   return button;
+}
+
+// Rooms still usable for this course: everything on the list that the
+// teacher has not vetoed. Green and blank both count - marking a room
+// "hentar vel" does not remove it as an option.
+function openRoomCount() {
+  const rows = courseRoomRows();
+  let open = 0;
+  rows.forEach((row) => {
+    const roomId = String(row.room_id || '').trim();
+    if (roomId && state.rooms.get(roomId) !== 'avoid') open++;
+  });
+  return open;
 }
 
 function renderRooms() {
@@ -451,9 +483,15 @@ function renderRooms() {
     target.appendChild(roomButton(row, !courseRoomIds.has(roomId)));
   });
 
-  el('roomCount').textContent =
-    'Valdar: ' + countOf(state.rooms, 'prefer') + ' henta vel, '
-    + countOf(state.rooms, 'avoid') + ' henta ekki.';
+  const open = openRoomCount();
+  const short = CONFIG.minOpenRooms - open;
+  const node = el('roomCount');
+  node.className = 'hint' + (short > 0 ? ' hint-warn' : '');
+  node.textContent = short > 0
+    ? 'Aðeins ' + open + ' stofur standa eftir. Leitaðu að ' + short + ' til viðbótar.'
+    : open + ' stofur standa eftir ('
+      + countOf(state.rooms, 'prefer') + ' henta vel, '
+      + countOf(state.rooms, 'avoid') + ' henta ekki).';
 }
 
 // Rooms anywhere in the school matching the query, minus the ones this
@@ -489,6 +527,15 @@ function renderRoomSearch() {
     return;
   }
   matches.forEach((row) => target.appendChild(roomButton(row, true)));
+}
+
+// The copy states both numbers; reading them from CONFIG means changing
+// a cap cannot leave the page telling teachers the old one.
+function renderRoomLimits() {
+  const cap = el('roomCap');
+  if (cap) cap.textContent = CONFIG.maxPreferPicks;
+  const floor = el('roomFloor');
+  if (floor) floor.textContent = CONFIG.minOpenRooms;
 }
 
 function showStepsForCourse() {
@@ -612,6 +659,17 @@ async function submit() {
   // kennitala embedded in teachers.username - without it the submission
   // reaches the sheet and then has nothing to attach to, which looks like
   // a successful answer that quietly never arrives.
+  // The floor is checked again here: the click guard stops a teacher
+  // vetoing past it, but a course whose own list is shorter than the floor
+  // starts below it with nothing vetoed at all, and only searching for
+  // more rooms fixes that.
+  const open = openRoomCount();
+  if (open < CONFIG.minOpenRooms) {
+    setStatus('Minnst ' + CONFIG.minOpenRooms + ' stofur verða að standa eftir - '
+      + 'nú eru þær ' + open + '. Notaðu "Finna aðra stofu" til að bæta við.', 'err');
+    return;
+  }
+
   const ssn = el('ssn').value.replace(/[\s-]/g, '');
   if (!/^\d{10}$/.test(ssn)) {
     setStatus('Sláðu inn kennitölu (10 tölustafir) - án hennar ratar óskin ekki á rétt námskeið.', 'err');
@@ -661,6 +719,7 @@ async function submit() {
 /* ---------- wiring ------------------------------------------------ */
 
 renderSchools();
+renderRoomLimits();
 renderWeeks();
 renderSlots();
 loadCatalog();
