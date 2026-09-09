@@ -54,6 +54,12 @@ const CONFIG = {
   // room counts as open below.
   maxPreferPicks: 3,
 
+  // How many slots a teacher may block. Unbounded, this is the one answer
+  // that can genuinely make a course unplaceable - every blocked slot is
+  // one the solver may not use, and a teacher blocking half the week has
+  // written a timetable rather than a preference.
+  maxAvoidSlots: 5,
+
   // The real rule. Vetoing is unlimited as long as this many rooms are
   // left usable - green or blank both count. A course reduced to one
   // option is not a preference, it is a booking, and it leaves Besta
@@ -158,20 +164,28 @@ function setStatus(message, kind) {
   node.className = 'status' + (kind ? ' ' + kind : '');
 }
 
-// Cycles neutral -> avoid -> prefer -> neutral, matching Spoi's own slot
-// buttons. "Avoid" comes first on purpose: it is the answer people
-// actually have, and the one they reach for most.
+// Cycles neutral -> prefer -> avoid -> neutral. The positive answer comes
+// first because a click is read as "I want this": landing on "hentar
+// ekki" from one tap on a room you just went and searched for reverses
+// what you asked for, and a teacher correcting that has to click twice
+// more to escape.
+//
+// A refused step CLEARS the mark rather than doing nothing, and returns
+// false so the caller can say why. Doing nothing would strand the button:
+// a room stuck on "hentar vel" whose next step is capped would retry that
+// same capped step on every further click and could never be reset. Every
+// click must move, or the cycle is a trap.
 function cycle(map, key, capPrefer, capAvoid) {
   const current = map.get(key);
   if (!current) {
-    if (capAvoid != null && countOf(map, 'avoid') >= capAvoid) return false;
-    map.set(key, 'avoid');
-  } else if (current === 'avoid') {
-    if (capPrefer != null && countOf(map, 'prefer') >= capPrefer) {
-      map.delete(key);
-      return true;
-    }
+    if (capPrefer != null && countOf(map, 'prefer') >= capPrefer) return false;
     map.set(key, 'prefer');
+  } else if (current === 'prefer') {
+    if (capAvoid != null && countOf(map, 'avoid') >= capAvoid) {
+      map.delete(key);
+      return false;
+    }
+    map.set(key, 'avoid');
   } else {
     map.delete(key);
   }
@@ -271,7 +285,13 @@ function renderSlots() {
         + (value === 'avoid' ? ' blocked' : '');
       button.textContent = value === 'prefer' ? 'Hentar' : (value === 'avoid' ? 'Ekki' : '');
       button.title = day.label + ' ' + slotLabel(slot);
-      button.onclick = () => { cycle(state.slots, token); renderSlots(); renderSummary(); };
+      button.onclick = () => {
+        const ok = cycle(state.slots, token, null, CONFIG.maxAvoidSlots);
+        setStatus(ok ? '' : 'Í mesta lagi ' + CONFIG.maxAvoidSlots
+          + ' tímar mega vera merktir "hentar ekki".', ok ? '' : 'err');
+        renderSlots();
+        renderSummary();
+      };
       target.appendChild(button);
     });
   }
@@ -423,12 +443,20 @@ function roomButton(row, isExtra) {
 
   button.append(name, meta);
   button.onclick = () => {
+    // Vetoing is the second click now, so the floor bites there rather
+    // than on first touch. Refused at the click rather than at submit: a
+    // teacher who has to undo six vetoes at the end has been let down by
+    // the form.
     const current = state.rooms.get(roomId);
-    // Refused at the click rather than at submit: a teacher who has to
-    // undo six vetoes at the end has been let down by the form.
-    if (!current && openRoomCount() <= CONFIG.minOpenRooms) {
+    if (current === 'prefer' && openRoomCount() <= CONFIG.minOpenRooms) {
+      // Cleared rather than left as-is, so the click still moves - see
+      // cycle() on why a stationary click is a trap.
+      state.rooms.delete(roomId);
       setStatus('Minnst ' + CONFIG.minOpenRooms + ' stofur verða að standa eftir. '
         + 'Leitaðu að fleiri stofum ef þessar henta ekki.', 'err');
+      renderRooms();
+      renderRoomSearch();
+      renderSummary();
       return;
     }
     const changed = cycle(state.rooms, roomId, CONFIG.maxPreferPicks, null);
@@ -536,6 +564,8 @@ function renderRoomLimits() {
   if (cap) cap.textContent = CONFIG.maxPreferPicks;
   const floor = el('roomFloor');
   if (floor) floor.textContent = CONFIG.minOpenRooms;
+  const slotCap = el('slotCap');
+  if (slotCap) slotCap.textContent = CONFIG.maxAvoidSlots;
 }
 
 function showStepsForCourse() {
