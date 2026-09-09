@@ -25,7 +25,14 @@ const CONFIG = {
   ],
 
   // ISO weeks. Autumn term by default; override with ?weeks=2-16.
+  // ISO rather than teaching weeks 1-14 on purpose: programmes start in
+  // different weeks, so "week 3" means a different date per programme
+  // while week 34 is the same Monday for everyone. The cost is that the
+  // number is unfamiliar, which is why every button carries its date.
   weeks: { from: 34, to: 47 },
+  // The year those week numbers belong to. Override with ?year=2027 for a
+  // spring term that runs into the next calendar year.
+  year: new Date().getFullYear(),
 
   // Slot 0 starts 08:20 and each slot is 50 minutes - the same constants
   // Spoi uses (SLOT_ZERO_START_MINUTES / SLOT_STEP_MINUTES, Code.js), so
@@ -83,6 +90,33 @@ function weekRangeFromQuery() {
   return { from: Number(match[1]), to: Number(match[2]) };
 }
 
+function yearFromQuery() {
+  const raw = new URLSearchParams(location.search).get('year');
+  const year = parseInt(raw, 10);
+  return year >= 2000 && year <= 2100 ? year : CONFIG.year;
+}
+
+// Monday of an ISO week. ISO week 1 is the one containing 4 January, so
+// that date is the anchor everything else counts from.
+function mondayOfIsoWeek(year, week) {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  // getUTCDay() is 0 for Sunday; ISO counts Monday as day 1.
+  const isoDay = jan4.getUTCDay() || 7;
+  const mondayOfWeek1 = Date.UTC(year, 0, 4 - (isoDay - 1));
+  return new Date(mondayOfWeek1 + (week - 1) * 7 * 86400000);
+}
+
+const MONTHS_IS = ['janúar', 'febrúar', 'mars', 'apríl', 'maí', 'júní', 'júlí',
+                   'ágúst', 'september', 'október', 'nóvember', 'desember'];
+
+function shortDate(date) {
+  return date.getUTCDate() + '.' + (date.getUTCMonth() + 1) + '.';
+}
+
+function longDate(date) {
+  return date.getUTCDate() + '. ' + MONTHS_IS[date.getUTCMonth()];
+}
+
 function setStatus(message, kind) {
   const node = el('status');
   node.textContent = message || '';
@@ -138,13 +172,28 @@ function renderSchools() {
 
 function renderWeeks() {
   const range = weekRangeFromQuery();
+  const year = yearFromQuery();
   const target = el('weekGrid');
   target.innerHTML = '';
   for (let week = range.from; week <= range.to; week++) {
+    const monday = mondayOfIsoWeek(year, week);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'week-btn' + (state.weeks.has(week) ? ' selected' : '');
-    button.textContent = week;
+
+    // Number and date together. A teacher counts teaching weeks 1-14, so
+    // a bare "34" invites reading it as the 34th week of teaching; the
+    // Monday underneath is what makes it unambiguous without a paragraph
+    // of explanation.
+    const number = document.createElement('span');
+    number.className = 'week-no';
+    number.textContent = week;
+    const date = document.createElement('span');
+    date.className = 'week-date';
+    date.textContent = shortDate(monday);
+    button.append(number, date);
+    button.title = 'Vika ' + week + ' hefst mánudaginn ' + longDate(monday);
+
     button.onclick = () => {
       if (state.weeks.has(week)) state.weeks.delete(week);
       else state.weeks.add(week);
@@ -153,6 +202,10 @@ function renderWeeks() {
     };
     target.appendChild(button);
   }
+
+  el('weekAnchor').textContent =
+    'Almanaksvikur (ekki kennsluvikur). Vika ' + range.from + ' hefst mánudaginn '
+    + longDate(mondayOfIsoWeek(year, range.from)) + '.';
 }
 
 function renderSlots() {

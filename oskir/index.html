@@ -11,9 +11,7 @@
 <header class="page-head">
   <h1>Óskir kennara</h1>
   <p class="lede">
-    Sendu óskir um vikur, tíma og stofur fyrir námskeiðið þitt. Ekkert af þessu er
-    trygging &ndash; stundataflan ræðst líka af öðrum námskeiðum og lausum stofum &ndash;
-    en óskirnar eru hafðar til hliðsjónar.
+    Óskir um vikur, tíma og stofur. Hafðar til hliðsjónar, en ekki trygging.
   </p>
 </header>
 
@@ -64,7 +62,7 @@
   <!-- Step 3 ------------------------------------------------------------ -->
   <section class="card" id="weeksCard" hidden>
     <h2><span class="step">3</span> Vikur</h2>
-    <p class="hint">Smelltu á þær vikur sem kennt er. Slepptu ef allar vikur eiga við.</p>
+    <p class="hint" id="weekAnchor"></p>
     <div id="weekGrid" class="week-grid"></div>
     <div class="toolbar">
       <button type="button" class="link-btn" data-weeks="all">Velja allar</button>
@@ -76,8 +74,8 @@
   <section class="card" id="timesCard" hidden>
     <h2><span class="step">4</span> Tímar</h2>
     <p class="hint">
-      Smelltu einu sinni fyrir <b class="swatch-avoid">hentar ekki</b>, tvisvar fyrir
-      <b class="swatch-prefer">hentar vel</b>, þrisvar til að hreinsa.
+      Einn smellur = <b class="swatch-avoid">hentar ekki</b>, tveir =
+      <b class="swatch-prefer">hentar vel</b>, þrír hreinsa.
     </p>
     <div id="slotGrid" class="slot-grid"></div>
   </section>
@@ -86,12 +84,8 @@
   <section class="card" id="roomsCard" hidden>
     <h2><span class="step">5</span> Stofur</h2>
     <p class="hint">
-      Aðeins stofur sem koma til greina fyrir þetta námskeið. Sama og hér að ofan:
-      einn smellur = <b class="swatch-avoid">hentar ekki</b>, tveir =
-      <b class="swatch-prefer">hentar vel</b>. Í mesta lagi
-      <span id="roomCap">3</span> af hvoru.
-      Athugið að &bdquo;hentar ekki&ldquo; er ósk, ekki útilokun &ndash; stofan er
-      sett aftast og notuð aðeins ef ekkert annað er laust.
+      Smellt eins og að ofan, í mesta lagi <span id="roomCap">3</span> af hvoru.
+      &bdquo;Hentar ekki&ldquo; útilokar ekki stofuna, hún er sett aftast.
       <a href="https://hi.is/haskolinn/adalbygging" target="_blank" rel="noopener">
         Yfirlitsmyndir bygginga</a>.
     </p>
@@ -101,8 +95,7 @@
     <details class="more-rooms">
       <summary>Finna aðra stofu</summary>
       <p class="hint">
-        Listinn að ofan nær yfir byggingarnar sem námskeiðið er í núna. Ef önnur
-        bygging hentar betur, leitaðu hér &ndash; stofan bætist þá við listann.
+        Listinn að ofan nær yfir byggingarnar sem námskeiðið er í núna.
       </p>
       <input id="roomSearch" type="search" placeholder="Sláðu inn stofu eða byggingu, t.d. Oddi eða HT-104">
       <div id="roomSearchResults" class="room-list"></div>
@@ -117,7 +110,7 @@
 
   <section class="card" id="summaryCard" hidden>
     <h2>Yfirlit</h2>
-    <p class="hint">Þetta verður sent. Ef eitthvað vantar, farðu til baka og smelltu á það.</p>
+    <p class="hint">Þetta verður sent.</p>
     <div id="summary" class="summary"></div>
   </section>
 

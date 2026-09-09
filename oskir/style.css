@@ -327,3 +327,20 @@ textarea { resize: vertical; }
 .combo-item.active { background: var(--accent-soft); color: var(--accent); }
 
 .combo-empty { padding: 9px 11px; font-size: 13px; color: var(--muted); }
+
+/* --- week buttons carry their date ---------------------------------- */
+/* The number alone reads as a teaching week ("week 3 of my course"), which
+   is a different date for every programme. The Monday underneath settles
+   it without a paragraph of explanation. */
+.week-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1.15;
+  padding: 6px 8px;
+}
+
+.week-no { font-weight: 600; }
+.week-date { font-size: 10px; opacity: .65; font-variant-numeric: tabular-nums; }
+.week-btn.selected .week-date { opacity: .85; }
