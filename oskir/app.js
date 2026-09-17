@@ -24,14 +24,16 @@ const CONFIG = {
     { value: 'hvs', label: 'HVS - Heilbrigðisvísindasvið' }
   ],
 
-  // ISO weeks. Autumn term by default; override with ?weeks=2-16.
+  // ISO weeks, per semester. The selected term picks the range, and
+  // ?weeks=2-16 still overrides both.
   // ISO rather than teaching weeks 1-14 on purpose: programmes start in
   // different weeks, so "week 3" means a different date per programme
   // while week 34 is the same Monday for everyone. The cost is that the
   // number is unfamiliar, which is why every button carries its date.
   weeks: { from: 34, to: 47 },
-  // The year is derived from the week range rather than set here - see
-  // resolveYear. Override with ?year=2027 to force one.
+  weeksBySemester: { H: { from: 34, to: 47 }, V: { from: 2, to: 16 }, S: { from: 22, to: 30 } },
+  // The year comes from the selected term where there is one, and is
+  // guessed from the week range otherwise - see resolveYear.
 
   // Slot 0 starts 08:20 and each slot is 50 minutes - the same constants
   // Spoi uses (SLOT_ZERO_START_MINUTES / SLOT_STEP_MINUTES, Code.js), so
@@ -80,15 +82,78 @@ const allRooms = new Map();
 // did not propose them, and that is worth seeing.
 const extraRooms = new Set();
 
+// Every catalog row the school returned, across all its terms, kept so
+// that switching term re-filters in memory instead of re-fetching.
+let catalogRows = [];
+
 const state = {
   weeks: new Set(),
   // "mán-0" -> 'prefer' | 'avoid'
   slots: new Map(),
   // room_id -> 'prefer' | 'avoid'
-  rooms: new Map()
+  rooms: new Map(),
+  // { year, semester } - which term these wishes are FOR. A school can
+  // be planning two at once (VON: haust 2026 running, vor 2027 being
+  // built), and a wish that does not name its term gets imported into
+  // both, describing courses the other term does not teach. Null until
+  // the catalog has been read, since the catalog is what says which
+  // terms exist.
+  term: null
 };
 
 const el = (id) => document.getElementById(id);
+
+// "V", "v", "vor" all name one semester; the query string is typed by a
+// person and the sheet is filled in by another, so neither is guaranteed
+// to be the bare letter this compares on.
+const semesterLetter = (value) => {
+  const text = String(value == null ? '' : value).trim().toUpperCase();
+  return text ? text.charAt(0) : '';
+};
+
+/* What a term is CALLED, as a teacher would say it.
+ *
+ * Fall-anchored again: year 2026 semester V is "Vor 2027". Labelling it
+ * "Vor 2026" would name a term that ended months ago, and a teacher
+ * checking they are answering for the right one would see the wrong
+ * answer at the very moment they were trying to verify it.
+ */
+function termLabel(term) {
+  if (!term || !term.year) return '';
+  const year = Number(term.year);
+  const names = { H: 'Haust', V: 'Vor', S: 'Sumar' };
+  const name = names[term.semester] || term.semester;
+  return name + ' ' + (term.semester === 'H' ? year : year + 1);
+}
+
+const sameTerm = (a, b) =>
+  !!a && !!b && String(a.year) === String(b.year) && a.semester === b.semester;
+
+// ?year=2026&semester=V, the way ?school= already works: the link an
+// administrator sends decides, so the teacher does not have to.
+function termFromQuery() {
+  const params = new URLSearchParams(location.search);
+  const year = String(params.get('year') || '').trim();
+  const semester = semesterLetter(params.get('semester'));
+  return year && semester ? { year: year, semester: semester } : null;
+}
+
+// The terms the catalog holds, newest first - haust before vor WITHIN a
+// year, because the year is fall-anchored.
+function termsInRows(rows) {
+  const rank = { H: 0, V: 1, S: 2 };
+  const seen = new Map();
+  rows.forEach((row) => {
+    const year = String(row.year || '').trim();
+    const semester = semesterLetter(row.semester);
+    if (!year || !semester) return;
+    const key = year + semester;
+    if (!seen.has(key)) seen.set(key, { year: year, semester: semester });
+  });
+  return Array.from(seen.values()).sort((a, b) =>
+    (Number(b.year) - Number(a.year))
+    || ((rank[b.semester] ?? 9) - (rank[a.semester] ?? 9)));
+}
 
 /* ---------- helpers ---------------------------------------------- */
 
@@ -102,8 +167,12 @@ function slotLabel(slot) {
 function weekRangeFromQuery() {
   const raw = new URLSearchParams(location.search).get('weeks');
   const match = raw && raw.match(/^(\d+)\s*-\s*(\d+)$/);
-  if (!match) return CONFIG.weeks;
-  return { from: Number(match[1]), to: Number(match[2]) };
+  if (match) return { from: Number(match[1]), to: Number(match[2]) };
+  // Otherwise the semester decides: autumn and spring do not share weeks,
+  // and offering a spring course weeks 34-47 asks about dates its term
+  // does not contain.
+  const semester = state.term && state.term.semester;
+  return (semester && CONFIG.weeksBySemester[semester]) || CONFIG.weeks;
 }
 
 /* Which year's weeks these are.
@@ -121,10 +190,6 @@ function weekRangeFromQuery() {
  * way. Nothing to update annually, and nothing to forget.
  */
 function resolveYear(range, today) {
-  const raw = new URLSearchParams(location.search).get('year');
-  const forced = parseInt(raw, 10);
-  if (forced >= 2000 && forced <= 2100) return forced;
-
   const now = today || new Date();
   const thisYear = now.getUTCFullYear();
   // End of the range's last week, not its Monday: a term in progress must
@@ -133,7 +198,23 @@ function resolveYear(range, today) {
   return endOfRange < now.getTime() ? thisYear + 1 : thisYear;
 }
 
-function yearFromQuery() {
+/* The calendar year the week buttons should show dates from.
+ *
+ * A known term answers this outright, and answers it correctly: Spoi
+ * counts academic years fall-anchored, so vor 2027 is year 2026 semester
+ * V, and the calendar year its weeks fall in is one MORE than the year
+ * the term is filed under. Getting that backwards would date every spring
+ * button a year early - the exact error the dates were added to prevent.
+ *
+ * resolveYear's guess stays as the fallback, for a catalog written before
+ * it carried terms at all.
+ */
+function calendarYearForWeeks() {
+  const term = state.term;
+  if (term && term.year) {
+    const year = Number(term.year);
+    if (year >= 2000 && year <= 2100) return term.semester === 'H' ? year : year + 1;
+  }
   return resolveYear(weekRangeFromQuery());
 }
 
@@ -221,7 +302,7 @@ function renderSchools() {
 
 function renderWeeks() {
   const range = weekRangeFromQuery();
-  const year = yearFromQuery();
+  const year = calendarYearForWeeks();
   const target = el('weekGrid');
   target.innerHTML = '';
   for (let week = range.from; week <= range.to; week++) {
@@ -594,6 +675,7 @@ function renderSummary() {
     .filter((id) => !state.rooms.has(id));
 
   const rows = [
+    ['Misseri', termLabel(state.term)],
     ['Vikur', Array.from(state.weeks).sort((a, b) => a - b).join(', ')],
     ['Tímar sem henta', keysWith(state.slots, 'prefer').join(', ')],
     ['Tímar sem henta ekki', keysWith(state.slots, 'avoid').join(', ')],
@@ -637,48 +719,140 @@ async function loadCatalog() {
   const school = el('school').value;
   const select = el('course');
   select.innerHTML = '<option value="">Sæki námskeið…</option>';
+  catalogRows = [];
+
+  try {
+    // Fetched WITHOUT a term filter on purpose: the reply is what tells
+    // the page which terms exist, and a filtered one could not populate
+    // the term selector. Switching term afterwards re-filters these rows
+    // rather than asking again.
+    const response = await fetch(CONFIG.apiUrl + '?school=' + encodeURIComponent(school));
+    const body = await response.json();
+    if (!body.ok) throw new Error(body.error || 'Óþekkt villa');
+    catalogRows = body.rows || [];
+    renderTerms();
+    applyTerm();
+  } catch (error) {
+    // Everything the previous school left behind goes too. A failed
+    // fetch that kept the old course's rooms selectable would let a wish
+    // be built from one school's catalogue and submitted against another.
+    catalog.clear();
+    allRooms.clear();
+    extraRooms.clear();
+    state.rooms.clear();
+    state.term = null;
+    select.innerHTML = '<option value="">Tókst ekki að sækja námskeið</option>';
+    el('courseHint').textContent = 'Villa: ' + error.message;
+    showStepsForCourse();
+  }
+}
+
+/* Which term the page is collecting for.
+ *
+ * The link decides where it can (?year=&semester=, the way ?school=
+ * already works), and otherwise the newest term in the catalog wins,
+ * because wishes are gathered for the term being PLANNED rather than the
+ * one running. Either way the choice is shown rather than merely applied:
+ * a teacher filling in half an hour of preferences for the wrong term
+ * finds out only when the answers never take effect.
+ */
+function renderTerms() {
+  const select = el('term');
+  const terms = termsInRows(catalogRows);
+  const wanted = termFromQuery();
+  // A term already chosen wins over the link. The link SEEDS the choice
+  // - state.term is null on first render, so ?year=&semester= decides
+  // then - but re-rendering must not undo a teacher who has since picked
+  // the other term, which would silently snap the form back every time.
+  const chosen = (state.term && terms.filter((t) => sameTerm(t, state.term))[0])
+    || (wanted && terms.filter((t) => sameTerm(t, wanted))[0])
+    || terms[0]
+    || null;
+  state.term = chosen;
+
+  if (!select) return;
+  select.innerHTML = '';
+  terms.forEach((term) => {
+    const option = document.createElement('option');
+    option.value = term.year + '-' + term.semester;
+    option.textContent = termLabel(term);
+    select.appendChild(option);
+  });
+  if (chosen) select.value = chosen.year + '-' + chosen.semester;
+  // A school with one term has no choice to make, and a dropdown of one
+  // is an invitation to look for the other. Still rendered, just not
+  // offered as a decision.
+  select.disabled = terms.length < 2;
+  const hint = el('termHint');
+  if (hint) {
+    hint.textContent = chosen
+      ? 'Óskirnar gilda fyrir ' + termLabel(chosen) + '.'
+      : 'Ekkert misseri skráð í námsframboði.';
+  }
+}
+
+// Everything downstream of the term: the course list, the room index and
+// the week dates all belong to one term and must be rebuilt when it
+// changes. Any picks already made are dropped - they named rooms and
+// weeks of the term being left behind.
+function applyTerm() {
+  const select = el('course');
   catalog.clear();
   allRooms.clear();
   extraRooms.clear();
   state.rooms.clear();
+  state.weeks.clear();
   el('courseSearch').value = '';
+  el('course').value = '';
   renderCourseResults(false);
+  renderWeeks();
 
-  try {
-    const response = await fetch(CONFIG.apiUrl + '?school=' + encodeURIComponent(school));
-    const body = await response.json();
-    if (!body.ok) throw new Error(body.error || 'Óþekkt villa');
+  const term = state.term;
+  catalogRows.forEach((row) => {
+    // A row with no term is kept whatever the term is: the catalog tab
+    // predates these columns, and a school that has not been re-synced
+    // yet would otherwise offer no courses at all.
+    const rowYear = String(row.year || '').trim();
+    const rowSemester = semesterLetter(row.semester);
+    if (term && rowYear && rowSemester && !sameTerm({ year: rowYear, semester: rowSemester }, term)) {
+      return;
+    }
+    const courseId = String(row.course_id || '').trim();
+    if (!courseId) return;
+    if (!catalog.has(courseId)) catalog.set(courseId, []);
+    catalog.get(courseId).push(row);
 
-    (body.rows || []).forEach((row) => {
-      const courseId = String(row.course_id || '').trim();
-      if (!courseId) return;
-      if (!catalog.has(courseId)) catalog.set(courseId, []);
-      catalog.get(courseId).push(row);
+    // The same row indexed a second way. A room appears once per course
+    // that uses it, so the first sighting wins and the rest collapse
+    // onto it - this index is about the room, not the course.
+    const roomId = String(row.room_id || '').trim();
+    if (roomId && !allRooms.has(roomId)) allRooms.set(roomId, row);
+  });
 
-      // The same row indexed a second way. A room appears once per course
-      // that uses it, so the first sighting wins and the rest collapse
-      // onto it - this index is about the room, not the course.
-      const roomId = String(row.room_id || '').trim();
-      if (roomId && !allRooms.has(roomId)) allRooms.set(roomId, row);
-    });
+  select.innerHTML = '<option value="">Veldu námskeið…</option>';
+  Array.from(catalog.keys()).sort().forEach((courseId) => {
+    const first = catalog.get(courseId)[0] || {};
+    const option = document.createElement('option');
+    option.value = courseId;
+    option.textContent = courseId + (first.course_name ? ' — ' + first.course_name : '');
+    select.appendChild(option);
+  });
 
-    select.innerHTML = '<option value="">Veldu námskeið…</option>';
-    Array.from(catalog.keys()).sort().forEach((courseId) => {
-      const first = catalog.get(courseId)[0] || {};
-      const option = document.createElement('option');
-      option.value = courseId;
-      option.textContent = courseId + (first.course_name ? ' — ' + first.course_name : '');
-      select.appendChild(option);
-    });
-
-    el('courseHint').textContent = catalog.size
-      ? catalog.size + ' námskeið í boði fyrir þetta svið.'
-      : 'Engin námskeið skráð fyrir þetta svið enn.';
-  } catch (error) {
-    select.innerHTML = '<option value="">Tókst ekki að sækja námskeið</option>';
-    el('courseHint').textContent = 'Villa: ' + error.message;
-  }
+  const forTerm = state.term ? ' á ' + termLabel(state.term).toLowerCase() : '';
+  el('courseHint').textContent = catalog.size
+    ? catalog.size + ' námskeið í boði fyrir þetta svið' + forTerm + '.'
+    : 'Engin námskeið skráð fyrir þetta svið' + forTerm + ' enn.';
   showStepsForCourse();
+}
+
+function onTermChange() {
+  const raw = String(el('term').value || '');
+  const parts = raw.split('-');
+  state.term = parts.length === 2 && parts[0]
+    ? { year: parts[0], semester: semesterLetter(parts[1]) }
+    : null;
+  renderTerms();
+  applyTerm();
 }
 
 async function submit() {
@@ -707,8 +881,15 @@ async function submit() {
     return;
   }
 
+  if (!state.term) { setStatus('Ekkert misseri valið.', 'err'); return; }
+
   const payload = {
     school: el('school').value,
+    // Sent with every wish, not inferred on arrival: the same course_id
+    // can be taught in both terms, so nothing downstream can work out
+    // which one an answer meant once it has been stored without it.
+    year: state.term.year,
+    semester: state.term.semester,
     course_id: courseId,
     teacher_email: el('email').value.trim(),
     teacher_ssn: ssn,
@@ -733,7 +914,7 @@ async function submit() {
     });
     const body = await response.json();
     if (!body.ok) throw new Error(body.error || 'Óþekkt villa');
-    setStatus('Óskir vistaðar. Takk!', 'ok');
+    setStatus('Óskir vistaðar fyrir ' + termLabel(state.term) + '. Takk!', 'ok');
   } catch (error) {
     // The write may well have landed even when the reply cannot be read -
     // say so rather than implying the answer was lost.
@@ -755,6 +936,7 @@ renderSlots();
 loadCatalog();
 
 el('school').addEventListener('change', loadCatalog);
+el('term').addEventListener('change', onTermChange);
 el('course').addEventListener('change', onCourseChange);
 el('roomSearch').addEventListener('input', renderRoomSearch);
 el('courseSearch').addEventListener('input', () => renderCourseResults());

@@ -25,6 +25,15 @@
         <select id="school"></select>
       </label>
       <label class="field">
+        <!-- Which term these wishes are for. Normally decided by the
+             link the administrator sends (?year=2026&semester=V) and
+             shown here so the teacher can see it; a select rather than
+             a label because a school can be planning two terms at once
+             and a wrong guess wastes the whole form. -->
+        <span>Misseri</span>
+        <select id="term"></select>
+      </label>
+      <label class="field">
         <span>Netfang</span>
         <input id="email" type="email" placeholder="nafn@hi.is" autocomplete="email">
       </label>
@@ -38,6 +47,7 @@
                pattern="[0-9]{10}" maxlength="10" placeholder="DDMMYYXXXX">
       </label>
     </div>
+    <p class="hint" id="termHint"></p>
   </section>
 
   <!-- Step 2 ------------------------------------------------------------ -->
