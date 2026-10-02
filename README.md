@@ -15,17 +15,23 @@ Everything here is static. No build step, no dependencies.
 
 Settings → Pages → Deploy from branch → `main` / root.
 
-## Adding a timetable PDF
+## Published timetables
 
-Drop the file in `<faculty>/pdf/` and add a line to that faculty's
-`index.html` — each has a commented-out example. The list is maintained by
-hand because Pages serves static files with no directory index: a stale
-link is visible, whereas a file that quietly stopped being published is
-not.
+Spoi writes these. In a school's Stundatöflur, ticking **Birta á vef** on a
+timetable publishes it here, and every later save into Núverandi lausn
+republishes it; unticking or deleting it takes the page down. Spoi's
+backend commits directly to `main` (one commit per change, none when
+nothing changed):
 
-This is the part intended to become automatic — Spoi generating the PDFs
-and pushing them here. When it does, the faculty pages should be generated
-alongside the files rather than left hand-written, so the two cannot drift.
+- `<faculty>/<term>/<name>.html` — one self-contained page per timetable
+  (week grid plus a list of every session). No teacher names.
+- `<faculty>/<term>/timetables.json` — that term's manifest.
+- `<faculty>/index.html` — the list between the `spoi:timetables` markers is
+  regenerated from the manifests. Edit anything outside the markers freely;
+  inside them, edits are overwritten.
+
+`<faculty>` is the school's `short_name` in Spoi's lookup spreadsheet,
+lowercased; `<term>` is e.g. `haust-2026`.
 
 ## The wishes page
 
