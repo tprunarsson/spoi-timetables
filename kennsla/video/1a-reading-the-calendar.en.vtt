@@ -1,0 +1,86 @@
+WEBVTT
+
+1
+00:00:04.604 --> 00:00:10.506
+Green: booked. Spoi's session and a
+TermTime booking match.
+
+2
+00:00:10.606 --> 00:00:15.508
+The booking's activity ID
+links the two.
+
+3
+00:00:15.608 --> 00:00:20.510
+Blue: a session with no booking
+in TermTime yet.
+
+4
+00:00:20.610 --> 00:00:26.512
+The box shows its room in
+Núverandi lausn (current solution).
+
+5
+00:00:26.612 --> 00:00:31.513
+Orange: a TermTime booking
+with no session in Spoi.
+
+6
+00:00:31.613 --> 00:00:35.513
+Its details come straight
+from TermTime.
+
+7
+00:00:35.613 --> 00:00:40.514
+“Búa til tíma” (create session)
+makes a session from it.
+
+8
+00:00:40.614 --> 00:00:46.516
+“Fjarlægja bókun” (remove booking)
+works once TermTime is connected.
+
+9
+00:00:46.616 --> 00:00:52.517
+“Ekki tímasett” (not scheduled):
+sessions with no time yet.
+
+10
+00:00:57.621 --> 00:01:03.627
+On a busier course, the pills
+appear a moment after it loads.
+
+11
+00:01:03.727 --> 00:01:08.629
+Red: students who also have another
+course at that time.
+
+12
+00:01:08.729 --> 00:01:14.631
+The yellow box reports the status
+of the session's current position.
+
+13
+00:01:14.731 --> 00:01:19.633
+“14x6/14”: 14 students,
+in 6 of the 14 weeks.
+
+14
+00:01:19.734 --> 00:01:25.636
+Amber ⛔: the room is booked in
+TermTime – booking would fail.
+
+15
+00:01:25.736 --> 00:01:30.638
+Amber ⚠: another course has the
+room in Núverandi lausn.
+
+16
+00:01:30.738 --> 00:01:36.640
+Purple: a teacher who teaches
+elsewhere at that time.
+
+17
+00:01:36.740 --> 00:01:41.641
+The last line says what it was
+checked against.

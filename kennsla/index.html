@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="is">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kennslumyndbönd – Spoi</title>
+<link rel="stylesheet" href="../oskir/style.css">
+<style>
+  /* Written by spoi's scripts/tutorial_site.py - edit there, not here. */
+  .lang-switch { display: flex; gap: 6px; margin-top: 12px; }
+  .lang-switch button { font: inherit; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); }
+  .lang-switch button[aria-pressed="true"] { background: var(--accent-soft);
+    border-color: var(--accent); }
+  .clip video { width: 100%; height: auto; border-radius: 10px; background: #000;
+    display: block; }
+  .clip h3 { margin: 0 0 10px; }
+  .module > h2 { margin: 28px 0 12px; }
+  .toc a { display: block; padding: 2px 0; }
+  body:not(.show-en) .i18n[lang="en"], body.show-en .i18n[lang="is"] { display: none; }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <p><a href="../">← Stundatöflur</a></p>
+  <h1><span class="i18n" lang="is">Kennslumyndbönd fyrir Spoi</span>
+    <span class="i18n" lang="en">Spoi tutorial videos</span></h1>
+  <p class="lede">
+    <span class="i18n" lang="is">Stutt myndbönd án tals, með texta, fyrir starfsfólk sem vinnur
+    stundatöflur í Spoi. Öll gögn í myndböndunum eru tilbúin.</span>
+    <span class="i18n" lang="en">Short silent videos with subtitles for staff who build
+    timetables in Spoi. All data in the videos is made up.</span>
+  </p>
+  <div class="lang-switch" role="group" aria-label="Tungumál texta / Subtitle language">
+    <button type="button" data-lang="is" aria-pressed="true">Íslenska</button>
+    <button type="button" data-lang="en" aria-pressed="false">English</button>
+  </div>
+</header>
+
+<main>
+  <nav class="card toc">
+    <strong><span class="i18n" lang="is">Fyrstu skref</span><span class="i18n" lang="en">Getting started</span></strong>
+    <a href="#0-getting-started"><span class="i18n" lang="is">0. Fyrstu skref</span><span class="i18n" lang="en">0. Getting started</span></a>
+    <strong><span class="i18n" lang="is">Bókun</span><span class="i18n" lang="en">Booking</span></strong>
+    <a href="#1a-reading-the-calendar"><span class="i18n" lang="is">1a. Að lesa dagatalið</span><span class="i18n" lang="en">1a. Reading the calendar</span></a>
+    <a href="#1b-fixing-whats-missing"><span class="i18n" lang="is">1b. Að laga það sem vantar</span><span class="i18n" lang="en">1b. Fixing what&#x27;s missing</span></a>
+    <a href="#1c-changing-and-booking"><span class="i18n" lang="is">1c. Að breyta og bóka</span><span class="i18n" lang="en">1c. Changing and booking</span></a>
+    <strong><span class="i18n" lang="is">Stillingar</span><span class="i18n" lang="en">Settings</span></strong>
+    <a href="#2a-session-settings"><span class="i18n" lang="is">2a. Stillingar tíma</span><span class="i18n" lang="en">2a. A session&#x27;s settings</span></a>
+    <a href="#2b-wishes-for-besta"><span class="i18n" lang="is">2b. Óskir fyrir Besta</span><span class="i18n" lang="en">2b. Wishes for Besta</span></a>
+    <a href="#2c-course-wide-settings"><span class="i18n" lang="is">2c. Víðværar stillingar</span><span class="i18n" lang="en">2c. Course-wide settings</span></a>
+    <strong><span class="i18n" lang="is">Kennarar og óskir</span><span class="i18n" lang="en">Teachers and their wishes</span></strong>
+    <a href="#3a-course-teachers"><span class="i18n" lang="is">3a. Kennarar námskeiðs</span><span class="i18n" lang="en">3a. A course&#x27;s teachers</span></a>
+    <a href="#3b-teachers-survey"><span class="i18n" lang="is">3b. Könnun kennara</span><span class="i18n" lang="en">3b. The teachers&#x27; survey</span></a>
+    <a href="#3c-from-survey-to-spoi"><span class="i18n" lang="is">3c. Úr könnun í Spoi</span><span class="i18n" lang="en">3c. From survey to Spoi</span></a>
+  </nav>
+<section class="module">
+  <h2><span class="i18n" lang="is">Fyrstu skref</span><span class="i18n" lang="en">Getting started</span></h2>
+  <article class="card clip" id="0-getting-started">
+    <h3><span class="i18n" lang="is">0. Fyrstu skref</span><span class="i18n" lang="en">0. Getting started</span></h3>
+    <video controls preload="none" playsinline poster="video/0-getting-started.jpg">
+      <source src="video/0-getting-started.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/0-getting-started.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/0-getting-started.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer can open Tímabókanir, find the courses that need attention, knows the parts of the screen, and knows how saving works.</p>
+  </article>
+</section>
+<section class="module">
+  <h2><span class="i18n" lang="is">Bókun</span><span class="i18n" lang="en">Booking</span></h2>
+  <article class="card clip" id="1a-reading-the-calendar">
+    <h3><span class="i18n" lang="is">1a. Að lesa dagatalið</span><span class="i18n" lang="en">1a. Reading the calendar</span></h3>
+    <video controls preload="none" playsinline poster="video/1a-reading-the-calendar.jpg">
+      <source src="video/1a-reading-the-calendar.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/1a-reading-the-calendar.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/1a-reading-the-calendar.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer can tell booked, unbooked and unscheduled sessions apart, and read the clash pills and the status of a session&#x27;s current position.</p>
+  </article>
+  <article class="card clip" id="1b-fixing-whats-missing">
+    <h3><span class="i18n" lang="is">1b. Að laga það sem vantar</span><span class="i18n" lang="en">1b. Fixing what&#x27;s missing</span></h3>
+    <video controls preload="none" playsinline poster="video/1b-fixing-whats-missing.jpg">
+      <source src="video/1b-fixing-whats-missing.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/1b-fixing-whats-missing.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/1b-fixing-whats-missing.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer can pair a session with its booking, give an unscheduled session a time, and create and delete sessions.</p>
+  </article>
+  <article class="card clip" id="1c-changing-and-booking">
+    <h3><span class="i18n" lang="is">1c. Að breyta og bóka</span><span class="i18n" lang="en">1c. Changing and booking</span></h3>
+    <video controls preload="none" playsinline poster="video/1c-changing-and-booking.jpg">
+      <source src="video/1c-changing-and-booking.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/1c-changing-and-booking.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/1c-changing-and-booking.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer can move a session, read what the move does (clashes before → after), change its room, length, type, note and weeks, and knows what Bóka does and when it is blocked.</p>
+  </article>
+</section>
+<section class="module">
+  <h2><span class="i18n" lang="is">Stillingar</span><span class="i18n" lang="en">Settings</span></h2>
+  <article class="card clip" id="2a-session-settings">
+    <h3><span class="i18n" lang="is">2a. Stillingar tíma</span><span class="i18n" lang="en">2a. A session&#x27;s settings</span></h3>
+    <video controls preload="none" playsinline poster="video/2a-session-settings.jpg">
+      <source src="video/2a-session-settings.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/2a-session-settings.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/2a-session-settings.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer knows what each of a session&#x27;s settings does - Heiti, Nemendafjöldi, Virkt, Tímasetja, Úthluta stofu, Samhliða - and sees Samhliða change the clash pills.</p>
+  </article>
+  <article class="card clip" id="2b-wishes-for-besta">
+    <h3><span class="i18n" lang="is">2b. Óskir fyrir Besta</span><span class="i18n" lang="en">2b. Wishes for Besta</span></h3>
+    <video controls preload="none" playsinline poster="video/2b-wishes-for-besta.jpg">
+      <source src="video/2b-wishes-for-besta.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/2b-wishes-for-besta.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/2b-wishes-for-besta.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer can set wished times (green, yellow, red) and rooms (green, yellow, or removed), and knows how Besta uses each.</p>
+  </article>
+  <article class="card clip" id="2c-course-wide-settings">
+    <h3><span class="i18n" lang="is">2c. Víðværar stillingar</span><span class="i18n" lang="en">2c. Course-wide settings</span></h3>
+    <video controls preload="none" playsinline poster="video/2c-course-wide-settings.jpg">
+      <source src="video/2c-course-wide-settings.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/2c-course-wide-settings.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/2c-course-wide-settings.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer can mark two courses as co-taught and sees that they then never clash and may share a room.</p>
+  </article>
+</section>
+<section class="module">
+  <h2><span class="i18n" lang="is">Kennarar og óskir</span><span class="i18n" lang="en">Teachers and their wishes</span></h2>
+  <article class="card clip" id="3a-course-teachers">
+    <h3><span class="i18n" lang="is">3a. Kennarar námskeiðs</span><span class="i18n" lang="en">3a. A course&#x27;s teachers</span></h3>
+    <video controls preload="none" playsinline poster="video/3a-course-teachers.jpg">
+      <source src="video/3a-course-teachers.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/3a-course-teachers.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/3a-course-teachers.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer can see who teaches which session, record a teacher&#x27;s wishes (times, weeks, rooms, a note) and save them with Afgreiða óskir.</p>
+  </article>
+  <article class="card clip" id="3b-teachers-survey">
+    <h3><span class="i18n" lang="is">3b. Könnun kennara</span><span class="i18n" lang="en">3b. The teachers&#x27; survey</span></h3>
+    <video controls preload="none" playsinline poster="video/3b-teachers-survey.jpg">
+      <source src="video/3b-teachers-survey.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/3b-teachers-survey.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/3b-teachers-survey.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer knows what a teacher sees and does on the survey page, and what each answer means.</p>
+  </article>
+  <article class="card clip" id="3c-from-survey-to-spoi">
+    <h3><span class="i18n" lang="is">3c. Úr könnun í Spoi</span><span class="i18n" lang="en">3c. From survey to Spoi</span></h3>
+    <video controls preload="none" playsinline poster="video/3c-from-survey-to-spoi.jpg">
+      <source src="video/3c-from-survey-to-spoi.mp4" type="video/mp4">
+      <track kind="subtitles" srclang="is" label="Íslenska" src="video/3c-from-survey-to-spoi.is.vtt" default>
+      <track kind="subtitles" srclang="en" label="English" src="video/3c-from-survey-to-spoi.en.vtt">
+    </video>
+    <p class="hint" lang="en">The viewer can set up the survey, fetch the answers, find the courses with open answers and process them into the sessions.</p>
+  </article>
+</section>
+</main>
+
+<script>
+  // One switch for the page text and every video's subtitles.
+  document.querySelectorAll('.lang-switch button').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var lang = button.dataset.lang;
+      document.body.classList.toggle('show-en', lang === 'en');
+      document.querySelectorAll('.lang-switch button').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === button));
+      });
+      document.querySelectorAll('video').forEach(function (video) {
+        Array.prototype.forEach.call(video.textTracks, function (track) {
+          track.mode = track.language === lang ? 'showing' : 'disabled';
+        });
+      });
+    });
+  });
+</script>
+</body>
+</html>

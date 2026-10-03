@@ -5,6 +5,8 @@ Public timetable site for Háskóli Íslands, served by GitHub Pages.
 - **`index.html`** — faculty picker.
 - **`von/ fvs/ hug/ mvs/ hvs/`** — one page per faculty, with its timetable
   PDFs in `pdf/`.
+- **`kennsla/`** — tutorial videos for staff, written by Spoi's
+  `scripts/tutorial_site.py` (do not edit by hand).
 - **`oskir/`** — the teacher-wishes page: weeks, times and rooms for a
   course the teacher picks. Static; it talks to an Apps Script endpoint
   that appends to a private Google Sheet.
