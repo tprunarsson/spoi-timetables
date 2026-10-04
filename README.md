@@ -1,6 +1,6 @@
 # Stundatöflur
 
-Public timetable site for Háskóli Íslands, served by GitHub Pages.
+Public timetable site, served by GitHub Pages.
 
 - **`index.html`** — faculty picker.
 - **`assets/`** — `site.css` and `site.js`, shared by the front page, the faculty
