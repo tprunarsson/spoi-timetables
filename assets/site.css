@@ -1,0 +1,147 @@
+/* The static pages: front page, faculty pages, tutorials, 404. The
+   teachers' wishes page (oskir/) is an app with its own stylesheet. */
+:root {
+  --bg: #f5f7fb;
+  --bg-glow: radial-gradient(1200px 500px at 15% -10%, rgba(37, 99, 235, .10), transparent 60%),
+             radial-gradient(900px 400px at 95% 0%, rgba(14, 165, 233, .08), transparent 60%);
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e5e9f0;
+  --border-strong: #d4dae3;
+  --text: #0b1220;
+  --muted: #5b6678;
+  --accent: #2563eb;
+  --accent-2: #0ea5e9;
+  --accent-soft: #eaf1fe;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .06);
+  --shadow-hover: 0 2px 4px rgba(15, 23, 42, .05), 0 14px 34px rgba(15, 23, 42, .10);
+  --topbar: rgba(255, 255, 255, .78);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0f1a;
+    --bg-glow: radial-gradient(1200px 500px at 15% -10%, rgba(59, 130, 246, .16), transparent 60%),
+               radial-gradient(900px 400px at 95% 0%, rgba(14, 165, 233, .10), transparent 60%);
+    --surface: #111827;
+    --surface-2: #0f172a;
+    --border: #1f2a3c;
+    --border-strong: #2c3a52;
+    --text: #e8edf6;
+    --muted: #9aa8bf;
+    --accent: #6ea8fe;
+    --accent-2: #38bdf8;
+    --accent-soft: #172440;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-hover: 0 8px 28px rgba(0, 0, 0, .45);
+    --topbar: rgba(10, 15, 26, .75);
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+  background: var(--bg-glow), var(--bg); background-attachment: fixed;
+  color: var(--text); font: 16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+code { white-space: nowrap; font-size: .92em; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; border-radius: 6px; }
+
+/* Language: both are in the page, one is shown. */
+html:not([data-lang="en"]) .i18n[lang="en"], html[data-lang="en"] .i18n[lang="is"] { display: none; }
+
+.wrap { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+
+/* --- Top bar --------------------------------------------------------- */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--topbar); backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+.topbar .wrap { display: flex; align-items: center; gap: 20px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700; letter-spacing: -.01em; }
+.brand:hover { text-decoration: none; }
+.brand img { width: 30px; height: auto; }
+.nav { display: flex; gap: 4px; margin-left: 8px; }
+.nav a { color: var(--muted); font-size: 14px; font-weight: 500; padding: 6px 10px; border-radius: 8px; }
+.nav a:hover, .nav a[aria-current="page"] { color: var(--text); background: var(--accent-soft); text-decoration: none; }
+.lang-switch { margin-left: auto; display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border); }
+.lang-switch button { font: inherit; font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--muted);
+  border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.lang-switch button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+@media (max-width: 680px) { .nav { display: none; } }
+
+/* --- Hero ------------------------------------------------------------ */
+.hero { padding: 56px 0 28px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); padding: 4px 12px; border-radius: 999px; margin-bottom: 16px; }
+.hero h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.1; letter-spacing: -.025em; margin: 0 0 14px; }
+.hero h1 .grad { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text;
+  background-clip: text; color: transparent; }
+.hero p.lede { font-size: 18px; color: var(--muted); max-width: 62ch; margin: 0; }
+.crumb { display: inline-flex; gap: 6px; font-size: 14px; font-weight: 500; margin-bottom: 18px; color: var(--muted); }
+
+/* --- Sections and cards ---------------------------------------------- */
+main { flex: 1; padding-bottom: 32px; }
+.section { margin: 28px 0; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.section-head h2 { font-size: 20px; letter-spacing: -.01em; margin: 0; }
+.section-head p { margin: 0; color: var(--muted); font-size: 14px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 22px 24px; }
+.card h2 { margin: 0 0 6px; font-size: 18px; }
+.card p { color: var(--muted); margin: 0; }
+
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.grid-2 { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+.tile { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 20px 22px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.tile:hover { text-decoration: none; transform: translateY(-2px); box-shadow: var(--shadow-hover); border-color: var(--border-strong); }
+.tile .code { font-size: 22px; font-weight: 750; letter-spacing: -.02em; }
+.tile .name { color: var(--muted); font-size: 14px; }
+.tile .arrow { position: absolute; right: 18px; top: 20px; color: var(--muted); transition: transform .15s ease, color .15s ease; }
+.tile:hover .arrow { transform: translateX(3px); color: var(--accent); }
+
+.feature { display: flex; flex-direction: column; gap: 10px; }
+.feature .icon { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); }
+.feature h2 { margin: 4px 0 0; }
+.feature .actions { margin-top: auto; padding-top: 10px; }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; padding: 10px 16px;
+  border-radius: 10px; background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(37, 99, 235, .3);
+  transition: filter .15s ease, transform .15s ease; }
+.btn:hover { text-decoration: none; filter: brightness(1.08); transform: translateY(-1px); }
+@media (prefers-color-scheme: dark) { .btn { color: #0a0f1a; } }
+
+/* Timetables Spoi publishes into a faculty page (between its markers). */
+.timetable-list h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+  margin: 18px 0 8px; }
+.timetable-list h3:first-of-type { margin-top: 4px; }
+.timetable-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.timetable-list li a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-weight: 500; background: var(--surface-2);
+  transition: border-color .15s ease, background .15s ease; }
+.timetable-list li a::after { content: "→"; color: var(--muted); }
+.timetable-list li a:hover { text-decoration: none; border-color: var(--accent); background: var(--accent-soft); }
+.timetable-list li em { color: var(--muted); }
+.timetable-list .empty { display: none; color: var(--muted); }
+.timetable-list:not(:has(ul)) .empty { display: block; }
+
+/* --- Footer ---------------------------------------------------------- */
+.footer { border-top: 1px solid var(--border); padding: 28px 0 36px; color: var(--muted); font-size: 14px; }
+.footer .wrap { display: flex; gap: 18px; align-items: flex-start; }
+.footer img { width: 56px; height: auto; flex: none; }
+.footer strong { color: var(--text); font-size: 16px; }
+.footer .tagline { font-size: 13px; font-weight: 600; margin-left: 6px; }
+.footer p { margin: 6px 0 0; max-width: 72ch; }
+.footer.compact .wrap { align-items: center; }
+.footer.compact img { width: 28px; }

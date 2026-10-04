@@ -3,6 +3,9 @@
 Public timetable site for Háskóli Íslands, served by GitHub Pages.
 
 - **`index.html`** — faculty picker.
+- **`assets/`** — `site.css` and `site.js`, shared by the front page, the faculty
+  pages, `kennsla/` and `404.html`: layout, dark mode, and the IS/EN switch
+  (text in both languages as `<span class="i18n" lang="is|en">`).
 - **`von/ fvs/ hug/ mvs/ hvs/`** — one page per faculty, with its timetable
   PDFs in `pdf/`.
 - **`kennsla/`** — tutorial videos for staff, written by Spoi's
