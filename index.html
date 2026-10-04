@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Stundatöflur</title>
 <link rel="stylesheet" href="oskir/style.css">
+<style>
+  /* The "Um Spoi" box from the Spói app (About.html), as a page footer. */
+  .about { max-width: 900px; margin: 32px auto 40px; padding: 0 16px; display: flex; gap: 16px;
+    align-items: flex-start; color: var(--muted); font-size: 14px; line-height: 1.55; }
+  .about img { flex: none; }
+  .about strong { color: var(--text); font-size: 16px; margin-right: 8px; }
+  .about-tagline { font-size: 13px; font-weight: 600; }
+  .about p { margin: 6px 0 0; }
+</style>
 </head>
 <body>
 
@@ -47,7 +56,7 @@
   <section class="card">
     <h2>Kennslumyndbönd</h2>
     <p class="hint">
-      Stutt myndbönd fyrir starfsfólk sem vinnur stundatöflur í Spoi:
+      Stutt myndbönd fyrir starfsfólk sem vinnur stundatöflur í Spóa:
       Tímabókanir, stillingar og óskir kennara.
     </p>
     <p><a class="room-btn" href="kennsla/" style="display:inline-flex">
@@ -55,6 +64,17 @@
       <span class="room-meta">Með íslenskum og enskum texta</span></a></p>
   </section>
 </main>
+
+<footer class="about">
+  <img src="spoi.png" alt="Spói" width="64" height="67">
+  <div>
+    <strong>Spói</strong>
+    <span class="about-tagline">Scheduling Planning Optimization Interface</span>
+    <p>Spói heldur utan um stundatöflugerð: samræmir gögn úr Uglu, bestar
+      stundatöflu og sýnir gagnvirkar stundatöflur fyrir námskeið, kjörsvið,
+      námsleiðir og stofur. Stundatöflurnar á þessari síðu eru birtar úr Spóa.</p>
+  </div>
+</footer>
 
 </body>
 </html>
