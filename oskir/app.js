@@ -88,7 +88,15 @@ const state = {
   term: null,
   // Initials of the course's registered teachers the respondent unticked:
   // "does not teach this term". Every teacher starts ticked.
-  notTeaching: new Set()
+  notTeaching: new Set(),
+  // The courses the typed kennitala is registered on this term, as
+  // { school, course_id }, or null when it is not known yet. Fetched one
+  // kennitala at a time (POST my_courses); the page never holds a list of
+  // anyone else's. myCoursesEnforced is false for a term the lookup has
+  // no data for, and every course is offered as before.
+  myCourses: null,
+  myCoursesEnforced: true,
+  myCoursesError: ''
 };
 
 const el = (id) => document.getElementById(id);
@@ -408,7 +416,7 @@ function renderCourseResults(open) {
     return;
   }
 
-  courseMatches = Array.from(catalog.keys())
+  courseMatches = visibleCourseIds()
     .filter((courseId) => !query || fold(courseLabel(courseId)).indexOf(query) >= 0)
     .sort()
     .slice(0, COURSE_RESULT_LIMIT);
@@ -417,9 +425,9 @@ function renderCourseResults(open) {
   if (courseMatches.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'combo-empty';
-    empty.textContent = catalog.size
-      ? 'Ekkert námskeið fannst.'
-      : 'Engin námskeið skráð fyrir þetta svið enn.';
+    empty.textContent = !catalog.size
+      ? 'Engin námskeið skráð fyrir þetta svið enn.'
+      : (visibleCourseIds().length ? 'Ekkert námskeið fannst.' : courseHintText());
     list.appendChild(empty);
   } else {
     courseMatches.forEach((courseId, index) => {
@@ -439,6 +447,95 @@ function renderCourseResults(open) {
   }
   list.hidden = false;
   box.setAttribute('aria-expanded', 'true');
+}
+
+// The kennitala's own courses in this school and term - or every course,
+// when the lookup has no data for the term. Nothing before the lookup has
+// answered: a list of every course would invite answering for one the
+// teacher does not teach.
+function visibleCourseIds() {
+  if (state.myCourses === null) return [];
+  const all = Array.from(catalog.keys());
+  if (!state.myCoursesEnforced) return all;
+  const school = el('school').value.toLowerCase();
+  const mine = new Set(state.myCourses
+    .filter((c) => !c.school || c.school.toLowerCase() === school)
+    .map((c) => c.course_id));
+  return all.filter((courseId) => mine.has(courseId));
+}
+
+function courseHintText() {
+  const forTerm = state.term ? ' á ' + termLabel(state.term).toLowerCase() : '';
+  if (!catalog.size) return 'Engin námskeið skráð fyrir þetta svið' + forTerm + ' enn.';
+  if (state.myCoursesError) return 'Villa: ' + state.myCoursesError;
+  if (state.myCourses === null) {
+    return validSsn() ? 'Sæki námskeiðin þín…' : 'Sláðu inn kennitölu til að sjá námskeiðin þín.';
+  }
+  const count = visibleCourseIds().length;
+  if (!state.myCoursesEnforced) return count + ' námskeið í boði fyrir þetta svið' + forTerm + '.';
+  if (count) {
+    return 'Þú ert skráð/ur á ' + count + ' námskeið' + forTerm + ' á þessu sviði.';
+  }
+  const school = el('school').value.toLowerCase();
+  const elsewhere = Array.from(new Set(state.myCourses
+    .map((c) => String(c.school || '').toUpperCase())
+    .filter((name) => name && name.toLowerCase() !== school)));
+  return elsewhere.length
+    ? 'Þú ert ekki skráð/ur á námskeið á þessu sviði' + forTerm + ', en á ' + elsewhere.join(', ')
+      + '. Veldu það svið hér að ofan.'
+    : 'Þú ert ekki skráð/ur kennari á námskeið' + forTerm
+      + '. Hafðu samband við skrifstofu sviðsins til að fá skráningu í Uglu.';
+}
+
+function renderCourseHint() {
+  el('courseHint').textContent = courseHintText();
+  // A course chosen before the kennitala changed may not be this
+  // teacher's; it is dropped rather than answered for.
+  const selected = el('course').value;
+  if (selected && visibleCourseIds().indexOf(selected) < 0) {
+    el('course').value = '';
+    el('courseSearch').value = '';
+    onCourseChange();
+  }
+}
+
+function validSsn() {
+  return /^\d{10}$/.test(el('ssn').value.replace(/[\s-]/g, ''));
+}
+
+let myCoursesRequest = 0;
+async function loadMyCourses() {
+  const request = ++myCoursesRequest;
+  state.myCourses = null;
+  state.myCoursesEnforced = true;
+  state.myCoursesError = '';
+  renderCourseHint();
+  if (!validSsn() || !state.term) return;
+  try {
+    // POST, so the kennitala is not in a URL. text/plain for the same
+    // reason as submit(): no CORS preflight.
+    const response = await fetch(CONFIG.apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'my_courses',
+        teacher_ssn: el('ssn').value.replace(/[\s-]/g, ''),
+        year: state.term.year,
+        semester: state.term.semester
+      })
+    });
+    const body = await response.json();
+    if (request !== myCoursesRequest) return;  // a newer kennitala or term won
+    if (!body.ok) throw new Error(body.error || 'Óþekkt villa');
+    // A script deployed before this lookup existed answers as if it were a
+    // wish; without "enforced" in the reply, nothing is filtered.
+    state.myCoursesEnforced = body.enforced !== false && Array.isArray(body.courses);
+    state.myCourses = Array.isArray(body.courses) ? body.courses : [];
+  } catch (error) {
+    if (request !== myCoursesRequest) return;
+    state.myCoursesError = 'Tókst ekki að sækja námskeiðin þín (' + error.message + ').';
+  }
+  renderCourseHint();
 }
 
 function highlightCourse(next) {
@@ -726,6 +823,9 @@ async function loadCatalog() {
     catalogRows = body.rows || [];
     renderTerms();
     applyTerm();
+    // The lookup is per term, so it waits for the catalog to say which -
+    // and runs again, because another school can bring other terms.
+    loadMyCourses();
   } catch (error) {
     // Everything the previous school left behind goes too. A failed
     // fetch that kept the old course's rooms selectable would let a wish
@@ -832,10 +932,7 @@ function applyTerm() {
     select.appendChild(option);
   });
 
-  const forTerm = state.term ? ' á ' + termLabel(state.term).toLowerCase() : '';
-  el('courseHint').textContent = catalog.size
-    ? catalog.size + ' námskeið í boði fyrir þetta svið' + forTerm + '.'
-    : 'Engin námskeið skráð fyrir þetta svið' + forTerm + ' enn.';
+  renderCourseHint();
   showStepsForCourse();
 }
 
@@ -847,6 +944,7 @@ function onTermChange() {
     : null;
   renderTerms();
   applyTerm();
+  loadMyCourses();
 }
 
 async function submit() {
@@ -923,6 +1021,9 @@ loadCatalog();
 
 el('school').addEventListener('change', loadCatalog);
 el('term').addEventListener('change', onTermChange);
+// Each keystroke restarts the lookup; only a complete kennitala sends one,
+// and a reply to an older one is ignored.
+el('ssn').addEventListener('input', loadMyCourses);
 el('course').addEventListener('change', onCourseChange);
 el('teachersNote').addEventListener('input', renderSummary);
 el('roomSearch').addEventListener('input', renderRoomSearch);
