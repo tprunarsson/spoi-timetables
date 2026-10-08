@@ -348,3 +348,12 @@ textarea { resize: vertical; }
 /* Not an error yet - the teacher has simply not finished. Amber rather
    than red, and only on the count that is short. */
 .hint-warn { color: var(--avoid); font-weight: 600; }
+
+/* Kennarar námskeiðsins: one checkbox per teacher's initials. */
+.teacher-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.teacher-check {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface);
+  font-weight: 600; cursor: pointer;
+}
+.teacher-check input { margin: 0; }

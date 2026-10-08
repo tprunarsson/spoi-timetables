@@ -51,24 +51,11 @@ const CONFIG = {
     { token: 'fös', label: 'Fös' }
   ],
 
-  // A teacher may name at most this many favourites. Ranking ten rooms
-  // "best" is not a ranking, so this stays capped even though a green
-  // room counts as open below.
-  maxPreferPicks: 3,
-
-  // How many slots a teacher may block. Unbounded, this is the one answer
-  // that can genuinely make a course unplaceable - every blocked slot is
-  // one the solver may not use, and a teacher blocking half the week has
-  // written a timetable rather than a preference.
-  maxAvoidSlots: 5,
-
-  // The real rule. Vetoing is unlimited as long as this many rooms are
-  // left usable - green or blank both count. A course reduced to one
-  // option is not a preference, it is a booking, and it leaves Besta
-  // nothing to solve with. If the offered list is shorter than this, the
-  // teacher has to search for more rather than being let off the floor:
-  // a small list is exactly when the alternatives matter most.
-  minOpenRooms: 5
+  // No caps on how many rooms or times a teacher marks: an answer is a
+  // wish the administrator reviews and completes in Spoi, and Besta
+  // treats a "hentar ekki" time as costly, not forbidden. (Earlier: at
+  // most 3 rooms "hentar vel", 5 times "hentar ekki", and 5 rooms had to
+  // remain usable.)
 };
 
 // course_id -> its catalog rows, filled by the one GET below.
@@ -98,7 +85,10 @@ const state = {
   // both, describing courses the other term does not teach. Null until
   // the catalog has been read, since the catalog is what says which
   // terms exist.
-  term: null
+  term: null,
+  // Initials of the course's registered teachers the respondent unticked:
+  // "does not teach this term". Every teacher starts ticked.
+  notTeaching: new Set()
 };
 
 const el = (id) => document.getElementById(id);
@@ -367,9 +357,8 @@ function renderSlots() {
       button.textContent = value === 'prefer' ? 'Hentar' : (value === 'avoid' ? 'Ekki' : '');
       button.title = day.label + ' ' + slotLabel(slot);
       button.onclick = () => {
-        const ok = cycle(state.slots, token, null, CONFIG.maxAvoidSlots);
-        setStatus(ok ? '' : 'Í mesta lagi ' + CONFIG.maxAvoidSlots
-          + ' tímar mega vera merktir "hentar ekki".', ok ? '' : 'err');
+        cycle(state.slots, token, null, null);
+        setStatus('');
         renderSlots();
         renderSummary();
       };
@@ -485,6 +474,8 @@ function pickCourse(courseId) {
 
 function onCourseChange() {
   state.rooms.clear();
+  state.notTeaching.clear();
+  el('teachersNote').value = '';
   // Extras belong to the course they were chosen for.
   extraRooms.clear();
   el('roomSearch').value = '';
@@ -524,27 +515,7 @@ function roomButton(row, isExtra) {
 
   button.append(name, meta);
   button.onclick = () => {
-    // Vetoing is the second click now, so the floor bites there rather
-    // than on first touch. Refused at the click rather than at submit: a
-    // teacher who has to undo six vetoes at the end has been let down by
-    // the form.
-    const current = state.rooms.get(roomId);
-    if (current === 'prefer' && openRoomCount() <= CONFIG.minOpenRooms) {
-      // Cleared rather than left as-is, so the click still moves - see
-      // cycle() on why a stationary click is a trap.
-      state.rooms.delete(roomId);
-      setStatus('Minnst ' + CONFIG.minOpenRooms + ' stofur verða að standa eftir. '
-        + 'Leitaðu að fleiri stofum ef þessar henta ekki.', 'err');
-      renderRooms();
-      renderRoomSearch();
-      renderSummary();
-      return;
-    }
-    const changed = cycle(state.rooms, roomId, CONFIG.maxPreferPicks, null);
-    if (!changed) {
-      setStatus('Í mesta lagi ' + CONFIG.maxPreferPicks + ' stofur merktar "hentar vel".', 'err');
-      return;
-    }
+    cycle(state.rooms, roomId, null, null);
     setStatus('');
     if (isExtra) extraRooms.add(roomId);
     renderRooms();
@@ -552,19 +523,6 @@ function roomButton(row, isExtra) {
     renderSummary();
   };
   return button;
-}
-
-// Rooms still usable for this course: everything on the list that the
-// teacher has not vetoed. Green and blank both count - marking a room
-// "hentar vel" does not remove it as an option.
-function openRoomCount() {
-  const rows = courseRoomRows();
-  let open = 0;
-  rows.forEach((row) => {
-    const roomId = String(row.room_id || '').trim();
-    if (roomId && state.rooms.get(roomId) !== 'avoid') open++;
-  });
-  return open;
 }
 
 function renderRooms() {
@@ -592,15 +550,10 @@ function renderRooms() {
     target.appendChild(roomButton(row, !courseRoomIds.has(roomId)));
   });
 
-  const open = openRoomCount();
-  const short = CONFIG.minOpenRooms - open;
   const node = el('roomCount');
-  node.className = 'hint' + (short > 0 ? ' hint-warn' : '');
-  node.textContent = short > 0
-    ? 'Aðeins ' + open + ' stofur standa eftir. Leitaðu að ' + short + ' til viðbótar.'
-    : open + ' stofur standa eftir ('
-      + countOf(state.rooms, 'prefer') + ' henta vel, '
-      + countOf(state.rooms, 'avoid') + ' henta ekki).';
+  node.className = 'hint';
+  node.textContent = countOf(state.rooms, 'prefer') + ' henta vel, '
+    + countOf(state.rooms, 'avoid') + ' henta ekki.';
 }
 
 // Rooms anywhere in the school matching the query, minus the ones this
@@ -638,22 +591,58 @@ function renderRoomSearch() {
   matches.forEach((row) => target.appendChild(roomButton(row, true)));
 }
 
-// The copy states both numbers; reading them from CONFIG means changing
-// a cap cannot leave the page telling teachers the old one.
-function renderRoomLimits() {
-  const cap = el('roomCap');
-  if (cap) cap.textContent = CONFIG.maxPreferPicks;
-  const floor = el('roomFloor');
-  if (floor) floor.textContent = CONFIG.minOpenRooms;
-  const slotCap = el('slotCap');
-  if (slotCap) slotCap.textContent = CONFIG.maxAvoidSlots;
-}
-
 function showStepsForCourse() {
   const chosen = !!el('course').value;
-  ['weeksCard', 'timesCard', 'roomsCard', 'noteCard', 'summaryCard', 'submitCard']
+  ['weeksCard', 'timesCard', 'roomsCard', 'teachersCard', 'noteCard', 'summaryCard', 'submitCard']
     .forEach((id) => { el(id).hidden = !chosen; });
-  if (chosen) { renderRooms(); renderRoomSearch(); renderSummary(); }
+  // A catalog written before it carried teachers has no such column at
+  // all: the step is left out rather than claiming no teacher is registered.
+  if (!catalogHasTeachers()) el('teachersCard').hidden = true;
+  if (chosen) { renderRooms(); renderRoomSearch(); renderTeachers(); renderSummary(); }
+}
+
+function catalogHasTeachers() {
+  for (const rows of catalog.values()) {
+    if (rows.some((row) => Object.prototype.hasOwnProperty.call(row, 'teachers'))) return true;
+  }
+  return false;
+}
+
+// The course's registered teachers as initials ("PE", "PT"), from the
+// catalog's teachers column - the same on every row of a course. Initials
+// only: this page is public. Spoi maps them back to teachers on import.
+function courseTeacherLabels() {
+  const rows = catalog.get(el('course').value) || [];
+  const cell = rows.length ? String(rows[0].teachers || '') : '';
+  return cell.split('::').map((label) => label.trim()).filter(Boolean);
+}
+
+function renderTeachers() {
+  const target = el('teacherList');
+  target.innerHTML = '';
+  const labels = courseTeacherLabels();
+  if (!labels.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'Engir kennarar skráðir á námskeiðið í Uglu.';
+    target.appendChild(empty);
+    return;
+  }
+  labels.forEach((label) => {
+    const row = document.createElement('label');
+    row.className = 'teacher-check';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = !state.notTeaching.has(label);
+    box.onchange = () => {
+      if (box.checked) state.notTeaching.delete(label); else state.notTeaching.add(label);
+      renderSummary();
+    };
+    const text = document.createElement('span');
+    text.textContent = label;
+    row.append(box, text);
+    target.appendChild(row);
+  });
 }
 
 // What the page will actually send, in words, immediately above the
@@ -683,8 +672,13 @@ function renderSummary() {
     ['Stofur sem henta ekki', roomNames(keysWith(state.rooms, 'avoid'))],
     ['Aðrar stofur', others.length
       ? others.length + ': ' + roomNames(others)
-      : '']
+      : ''],
+    // Nobody unticked is an answer ("they all teach"), not a gap.
+    ['Kenna ekki á misserinu', courseTeacherLabels()
+      .filter((label) => state.notTeaching.has(label)).join(', ')
+      || (courseTeacherLabels().length ? 'allir kenna' : '')]
   ];
+  if (el('teachersNote').value.trim()) rows.push(['Um kennara', el('teachersNote').value.trim()]);
   const target = el('summary');
   target.innerHTML = '';
   rows.forEach(([label, value]) => {
@@ -863,17 +857,6 @@ async function submit() {
   // kennitala embedded in teachers.username - without it the submission
   // reaches the sheet and then has nothing to attach to, which looks like
   // a successful answer that quietly never arrives.
-  // The floor is checked again here: the click guard stops a teacher
-  // vetoing past it, but a course whose own list is shorter than the floor
-  // starts below it with nothing vetoed at all, and only searching for
-  // more rooms fixes that.
-  const open = openRoomCount();
-  if (open < CONFIG.minOpenRooms) {
-    setStatus('Minnst ' + CONFIG.minOpenRooms + ' stofur verða að standa eftir - '
-      + 'nú eru þær ' + open + '. Notaðu "Finna aðra stofu" til að bæta við.', 'err');
-    return;
-  }
-
   const ssn = el('ssn').value.replace(/[\s-]/g, '');
   if (!/^\d{10}$/.test(ssn)) {
     setStatus('Sláðu inn kennitölu (10 tölustafir) - án hennar ratar óskin ekki á rétt námskeið.', 'err');
@@ -898,7 +881,11 @@ async function submit() {
     prefer_times: keysWith(state.slots, 'prefer'),
     avoid_times: keysWith(state.slots, 'avoid'),
     weeks: Array.from(state.weeks).sort((a, b) => a - b),
-    note: el('note').value.trim()
+    note: el('note').value.trim(),
+    // Only this course's own initials: a set left over from another
+    // course would name teachers the course does not have.
+    not_teaching: courseTeacherLabels().filter((label) => state.notTeaching.has(label)),
+    teachers_note: el('teachersNote').value.trim()
   };
 
   el('submitBtn').disabled = true;
@@ -930,7 +917,6 @@ async function submit() {
 /* ---------- wiring ------------------------------------------------ */
 
 renderSchools();
-renderRoomLimits();
 renderWeeks();
 renderSlots();
 loadCatalog();
@@ -938,6 +924,7 @@ loadCatalog();
 el('school').addEventListener('change', loadCatalog);
 el('term').addEventListener('change', onTermChange);
 el('course').addEventListener('change', onCourseChange);
+el('teachersNote').addEventListener('input', renderSummary);
 el('roomSearch').addEventListener('input', renderRoomSearch);
 el('courseSearch').addEventListener('input', () => renderCourseResults());
 el('courseSearch').addEventListener('focus', () => renderCourseResults());
