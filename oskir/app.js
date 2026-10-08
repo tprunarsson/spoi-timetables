@@ -582,7 +582,9 @@ function onCourseChange() {
 // Every room this course may be given: the prefill's own list plus
 // anything the teacher searched for and added.
 function courseRoomRows() {
-  const rows = (catalog.get(el('course').value) || []).slice();
+  // A course with no rooms yet comes as one row with a blank room_id.
+  const rows = (catalog.get(el('course').value) || [])
+    .filter((row) => String(row.room_id || '').trim());
   const seen = new Set(rows.map((row) => String(row.room_id || '').trim()));
   extraRooms.forEach((roomId) => {
     if (!seen.has(roomId) && allRooms.has(roomId)) rows.push(allRooms.get(roomId));
@@ -630,7 +632,7 @@ function renderRooms() {
   if (rows.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'hint';
-    empty.textContent = 'Engar stofur skráðar fyrir þetta námskeið enn.';
+    empty.textContent = 'Engar stofur skráðar fyrir þetta námskeið enn. Leitaðu að stofu hér fyrir neðan.';
     target.appendChild(empty);
     el('roomCount').textContent = '';
     return;
