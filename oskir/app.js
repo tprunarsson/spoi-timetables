@@ -89,9 +89,9 @@ const state = {
   // Initials of the course's registered teachers the respondent unticked:
   // "does not teach this term". Every teacher starts ticked.
   notTeaching: new Set(),
-  // label -> session types unticked for that teacher. Empty means "all of
-  // the course's types", the default for a ticked teacher.
-  typesOff: new Map(),
+  // label -> session types ticked for that teacher by hand. Absent means
+  // "the course's own types", the default for a ticked teacher.
+  typesOn: new Map(),
   // The courses the typed kennitala is registered on this term, as
   // { school, course_id }, or null when it is not known yet. Fetched one
   // kennitala at a time (POST my_courses); the page never holds a list of
@@ -580,7 +580,7 @@ function onCourseChange() {
   state.weeks.clear();
   state.slots.clear();
   state.notTeaching.clear();
-  state.typesOff.clear();
+  state.typesOn.clear();
   el('teachersNote').value = '';
   el('note').value = '';
   // Extras belong to the course they were chosen for.
@@ -736,9 +736,17 @@ const TYPE_LABELS = {
   ut: 'Umræðutímar', hp: 'Verkefnatímar', ms: 'Málstofa', vs: 'Vinnustofa', tt: 'Tölvutímar'
 };
 
-// The kinds of session the course has, from the catalog's types column.
-// None when the course has only placeholders - then a teacher is ticked or
-// not, with nothing finer to say.
+// The same names with a soft hyphen where each may break, so the table's
+// nine headings fit a normal screen on two lines rather than scrolling.
+const TYPE_HEADINGS = {
+  fl: 'Fyrir\u00adlestrar', du: 'Dæma\u00adtímar', ae: 'Æfinga\u00adtímar', vl: 'Verk\u00adlegt',
+  ut: 'Umræðu\u00adtímar', hp: 'Verkefna\u00adtímar', ms: 'Mál\u00adstofa', vs: 'Vinnu\u00adstofa',
+  tt: 'Tölvu\u00adtímar'
+};
+
+// The kinds of session the course has today, from the catalog's types
+// column - what a ticked teacher starts with. Every type is OFFERED either
+// way (TYPE_LABELS); this only decides which are pre-ticked.
 function courseTypes() {
   const rows = catalog.get(el('course').value) || [];
   const cell = rows.length ? String(rows[0].types || '') : '';
@@ -746,27 +754,31 @@ function courseTypes() {
     .filter((code, index, all) => TYPE_LABELS[code] && all.indexOf(code) === index);
 }
 
-// The types a teacher is ticked for: all of the course's, less those
-// unticked; none for a teacher who does not teach.
+// The types a teacher is ticked for: what was ticked by hand, or the
+// course's own types until then; none for a teacher who does not teach.
 function teacherTypesOn(label) {
   if (state.notTeaching.has(label)) return [];
-  const off = state.typesOff.get(label) || new Set();
-  return courseTypes().filter((code) => !off.has(code));
+  const chosen = state.typesOn.get(label);
+  return chosen ? Object.keys(TYPE_LABELS).filter((code) => chosen.has(code)) : courseTypes();
 }
 
-function pill(text, checked, onchange, extraClass) {
-  const row = document.createElement('label');
-  row.className = 'teacher-check' + (extraClass ? ' ' + extraClass : '');
+function checkboxCell(checked, onchange, title) {
+  const cell = document.createElement('td');
   const box = document.createElement('input');
   box.type = 'checkbox';
   box.checked = checked;
+  box.title = title;
+  box.setAttribute('aria-label', title);
   box.onchange = () => onchange(box.checked);
-  const span = document.createElement('span');
-  span.textContent = text;
-  row.append(box, span);
-  return row;
+  cell.appendChild(box);
+  return cell;
 }
 
+// A table, as in Ugla: one row per registered teacher, "Kennir" (teaches
+// this term), then one column per kind of session. Unticking "Kennir"
+// clears the row; ticking it pre-ticks the course's own types; ticking a
+// type ticks "Kennir". A teacher may teach with no type ticked - that just
+// says nothing finer.
 function renderTeachers() {
   const target = el('teacherList');
   target.innerHTML = '';
@@ -778,39 +790,55 @@ function renderTeachers() {
     target.appendChild(empty);
     return;
   }
-  const types = courseTypes();
+  const codes = Object.keys(TYPE_LABELS);
+  const table = document.createElement('table');
+  table.className = 'teacher-table';
+  const head = document.createElement('tr');
+  ['Kennari', 'Kennir'].concat(codes.map((code) => TYPE_HEADINGS[code])).forEach((text) => {
+    const th = document.createElement('th');
+    th.textContent = text;
+    head.appendChild(th);
+  });
+  const thead = document.createElement('thead');
+  thead.appendChild(head);
+  table.appendChild(thead);
+  const body = document.createElement('tbody');
   labels.forEach((label) => {
-    const line = document.createElement('div');
-    line.className = 'teacher-row';
-    // The teacher: unticking takes every type with it, ticking gives all.
-    line.appendChild(pill(label, !state.notTeaching.has(label), (checked) => {
+    const row = document.createElement('tr');
+    if (state.notTeaching.has(label)) row.className = 'not-teaching';
+    const name = document.createElement('th');
+    name.scope = 'row';
+    name.textContent = label;
+    row.appendChild(name);
+    row.appendChild(checkboxCell(!state.notTeaching.has(label), (checked) => {
       if (checked) state.notTeaching.delete(label); else state.notTeaching.add(label);
-      state.typesOff.delete(label);
+      state.typesOn.delete(label);
       renderTeachers();
       renderSummary();
-    }));
-    // Their types. Ticking one for an unticked teacher ticks the teacher
-    // with just that type; unticking the last one unticks the teacher.
-    types.forEach((code) => {
-      line.appendChild(pill(TYPE_LABELS[code], teacherTypesOn(label).indexOf(code) >= 0, (checked) => {
-        if (state.notTeaching.has(label)) {
-          state.notTeaching.delete(label);
-          state.typesOff.set(label, new Set(types.filter((other) => other !== code)));
-        } else {
-          const off = new Set(state.typesOff.get(label) || []);
-          if (checked) off.delete(code); else off.add(code);
-          state.typesOff.set(label, off);
-          if (!teacherTypesOn(label).length) {
-            state.notTeaching.add(label);
-            state.typesOff.delete(label);
-          }
-        }
+    }, label + ' kennir námskeiðið'));
+    const on = teacherTypesOn(label);
+    codes.forEach((code) => {
+      row.appendChild(checkboxCell(on.indexOf(code) >= 0, (checked) => {
+        const types = new Set(state.notTeaching.has(label) ? [] : teacherTypesOn(label));
+        state.notTeaching.delete(label);
+        if (checked) types.add(code); else types.delete(code);
+        state.typesOn.set(label, types);
         renderTeachers();
         renderSummary();
-      }, 'type-check'));
+      }, label + ': ' + TYPE_LABELS[code]));
     });
-    target.appendChild(line);
+    body.appendChild(row);
   });
+  table.appendChild(body);
+  const wrap = document.createElement('div');
+  wrap.className = 'teacher-table-wrap';
+  wrap.appendChild(table);
+  target.appendChild(wrap);
+  // Shown on a phone only (style.css), where the table scrolls sideways.
+  const scrollHint = document.createElement('p');
+  scrollHint.className = 'hint scroll-hint';
+  scrollHint.textContent = 'Strjúktu töfluna til hliðar til að sjá allar tegundir tíma.';
+  target.appendChild(scrollHint);
 }
 
 // What the page will actually send, in words, immediately above the
@@ -846,10 +874,11 @@ function renderSummary() {
       .filter((label) => state.notTeaching.has(label)).join(', ')
       || (courseTeacherLabels().length ? 'allir kenna' : '')]
   ];
-  if (courseTypes().length) {
+  if (courseTeacherLabels().length) {
     rows.push(['Hver kennir hvað', courseTeacherLabels()
       .filter((label) => !state.notTeaching.has(label))
-      .map((label) => label + ': ' + teacherTypesOn(label).map((code) => TYPE_LABELS[code]).join(', '))
+      .map((label) => label + ': '
+        + (teacherTypesOn(label).map((code) => TYPE_LABELS[code]).join(', ') || 'tegund ekki tilgreind'))
       .join('; ')]);
   }
   if (el('teachersNote').value.trim()) rows.push(['Um kennara', el('teachersNote').value.trim()]);
@@ -1060,12 +1089,9 @@ async function submit() {
     // Only this course's own initials: a set left over from another
     // course would name teachers the course does not have.
     not_teaching: courseTeacherLabels().filter((label) => state.notTeaching.has(label)),
-    // label -> types, for every teacher still ticked (none when the course
-    // has no types to choose between).
-    teacher_types: courseTypes().length
-      ? courseTeacherLabels().filter((label) => !state.notTeaching.has(label))
-        .reduce((out, label) => { out[label] = teacherTypesOn(label); return out; }, {})
-      : {},
+    // label -> types, for every teacher still ticked.
+    teacher_types: courseTeacherLabels().filter((label) => !state.notTeaching.has(label))
+      .reduce((out, label) => { out[label] = teacherTypesOn(label); return out; }, {}),
     teachers_note: el('teachersNote').value.trim()
   };
 
