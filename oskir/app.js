@@ -590,6 +590,176 @@ function onCourseChange() {
   renderWeeks();
   renderSlots();
   showStepsForCourse();
+  loadPlan();
+}
+
+/* ---------- the course's current draft ----------------------------- */
+
+// The course's sessions as they stand in Spoi now (the survey script's
+// ?course=, from the "plan" tab the course-list update writes). Read-only:
+// context for the wishes below, not something this page changes.
+let planRequest = 0;
+async function loadPlan() {
+  const request = ++planRequest;
+  const courseId = el('course').value;
+  el('planGrid').innerHTML = '';
+  el('planList').innerHTML = '';
+  if (!courseId || !state.term) return;
+  el('planHint').textContent = 'Sæki drög…';
+  try {
+    const url = CONFIG.apiUrl + '?school=' + encodeURIComponent(el('school').value)
+      + '&year=' + encodeURIComponent(state.term.year)
+      + '&semester=' + encodeURIComponent(state.term.semester)
+      + '&course=' + encodeURIComponent(courseId);
+    const body = await (await fetch(url)).json();
+    if (request !== planRequest) return;  // another course was picked since
+    if (!body.ok) throw new Error(body.error || 'Óþekkt villa');
+    renderPlan(body.plan || []);
+  } catch (error) {
+    if (request !== planRequest) return;
+    el('planHint').textContent = 'Tókst ekki að sækja drögin (' + error.message + ').';
+  }
+}
+
+// "2::3::4::7" -> "2–4, 7".
+function weekRangesText(weeks) {
+  const sorted = Array.from(new Set(weeks)).sort((a, b) => a - b);
+  const parts = [];
+  for (let i = 0; i < sorted.length; i++) {
+    let j = i;
+    while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) j++;
+    parts.push(sorted[i] === sorted[j] ? String(sorted[i]) : sorted[i] + '\u2013' + sorted[j]);
+    i = j;
+  }
+  return parts.join(', ');
+}
+
+function planSessions(rows) {
+  const dayIndex = {};
+  CONFIG.days.forEach((day, index) => { dayIndex[day.token] = index; });
+  return rows.map((row) => {
+    const parts = String(row.slot || '').split('-');
+    const day = parts.length === 2 && parts[0] in dayIndex ? parts[0] : '';
+    const start = day ? Number(parts[1]) : NaN;
+    const length = Math.max(1, Number(row.n_timeslot) || 1);
+    const type = String(row.type || '').trim().toLowerCase();
+    return {
+      day: day,
+      dayIndex: day ? dayIndex[day] : -1,
+      start: Number.isFinite(start) ? start : -1,
+      length: length,
+      typeCode: type,
+      type: TYPE_LABELS[type] || 'Óskilgreind tegund',
+      room: String(row.room || ''),
+      teachers: String(row.teachers || '').split('::').filter(Boolean),
+      weeks: String(row.weeks || '').split('::').map(Number).filter((week) => week > 0)
+    };
+  });
+}
+
+function sessionTimeText(session) {
+  if (session.start < 0) return 'Ekki tímasett';
+  const day = CONFIG.days[session.dayIndex].label;
+  const end = CONFIG.slotZeroStartMinutes + (session.start + session.length) * CONFIG.slotStepMinutes - 10;
+  return day + ' ' + slotLabel(session.start) + '\u2013'
+    + String(Math.floor(end / 60)).padStart(2, '0') + ':' + String(end % 60).padStart(2, '0');
+}
+
+function renderPlan(rows) {
+  const sessions = planSessions(rows);
+  const updated = rows.length ? String(rows[0].updated || '') : '';
+  el('planHint').textContent = sessions.length
+    ? 'Tímar námskeiðsins eins og þeir standa núna í Spóa' + (updated ? ' (drög frá ' + updated + ')' : '')
+      + '. Geta enn breyst - athugasemdir þínar hér fyrir neðan eru teknar með.'
+    : 'Engir tímar skráðir fyrir námskeiðið í Spóa enn.';
+
+  // The week grid: days across, slots down, each session a block spanning
+  // its length. Sessions overlapping on one day share it side by side.
+  const placed = sessions.filter((session) => session.start >= 0)
+    .sort((a, b) => a.dayIndex - b.dayIndex || a.start - b.start);
+  const grid = el('planGrid');
+  grid.innerHTML = '';
+  if (placed.length) {
+    const lanesByDay = CONFIG.days.map(() => []);
+    placed.forEach((session) => {
+      const lanes = lanesByDay[session.dayIndex];
+      let lane = lanes.findIndex((end) => end <= session.start);
+      if (lane < 0) { lane = lanes.length; lanes.push(0); }
+      lanes[lane] = session.start + session.length;
+      session.lane = lane;
+    });
+    const first = Math.min(CONFIG.firstSlot, ...placed.map((s) => s.start));
+    const last = Math.max(CONFIG.lastSlot, ...placed.map((s) => s.start + s.length - 1));
+    const columns = ['44px'];
+    const dayColumn = [];
+    lanesByDay.forEach((lanes) => {
+      const count = Math.max(1, lanes.length);
+      dayColumn.push(columns.length + 1);
+      for (let i = 0; i < count; i++) columns.push('minmax(0, ' + (1 / count).toFixed(4) + 'fr)');
+    });
+    grid.style.gridTemplateColumns = columns.join(' ');
+    grid.style.gridTemplateRows = 'auto repeat(' + (last - first + 1) + ', 26px)';
+    CONFIG.days.forEach((day, index) => {
+      const head = document.createElement('div');
+      head.className = 'plan-head';
+      head.textContent = day.label;
+      head.style.gridColumn = dayColumn[index] + ' / span ' + Math.max(1, lanesByDay[index].length);
+      head.style.gridRow = '1';
+      grid.appendChild(head);
+    });
+    for (let slot = first; slot <= last; slot++) {
+      const time = document.createElement('div');
+      time.className = 'plan-time';
+      time.textContent = slotLabel(slot);
+      time.style.gridRow = String(slot - first + 2);
+      time.style.gridColumn = '1';
+      grid.appendChild(time);
+      const line = document.createElement('div');
+      line.className = 'plan-line';
+      line.style.gridRow = String(slot - first + 2);
+      line.style.gridColumn = '2 / -1';
+      grid.appendChild(line);
+    }
+    placed.forEach((session) => {
+      const block = document.createElement('div');
+      block.className = 'plan-block type-' + (session.typeCode || 'none');
+      block.style.gridRow = (session.start - first + 2) + ' / span ' + session.length;
+      block.style.gridColumn = String(dayColumn[session.dayIndex] + session.lane);
+      // The full name on a wide screen, a two-letter code on a phone
+      // (style.css) - the list below spells everything out either way.
+      const long = document.createElement('span');
+      long.className = 'plan-long';
+      long.textContent = session.type;
+      const short = document.createElement('span');
+      short.className = 'plan-short';
+      short.textContent = TYPE_SHORT[session.typeCode] || '?';
+      const who = document.createElement('span');
+      who.className = 'plan-who';
+      who.textContent = session.teachers.join(', ');
+      block.append(long, short, who);
+      block.title = sessionTimeText(session) + ' \u00b7 ' + session.type
+        + (session.room ? ' \u00b7 ' + session.room : '')
+        + (session.weeks.length ? ' \u00b7 vikur ' + weekRangesText(session.weeks) : '');
+      grid.appendChild(block);
+    });
+  }
+
+  // The same sessions in words, with everything the blocks leave out.
+  const list = el('planList');
+  list.innerHTML = '';
+  sessions.slice().sort((a, b) => (a.start < 0) - (b.start < 0) || a.dayIndex - b.dayIndex || a.start - b.start)
+    .forEach((session) => {
+      const item = document.createElement('div');
+      item.className = 'plan-item';
+      item.textContent = [
+        sessionTimeText(session),
+        session.type,
+        session.teachers.length ? session.teachers.join(', ') : 'enginn kennari skráður',
+        session.room,
+        session.weeks.length ? 'vikur ' + weekRangesText(session.weeks) : ''
+      ].filter(Boolean).join(' \u00b7 ');
+      list.appendChild(item);
+    });
 }
 
 // Every room this course may be given: the prefill's own list plus
@@ -705,7 +875,7 @@ function renderRoomSearch() {
 
 function showStepsForCourse() {
   const chosen = !!el('course').value;
-  ['weeksCard', 'timesCard', 'roomsCard', 'teachersCard', 'noteCard', 'summaryCard', 'submitCard']
+  ['planCard', 'weeksCard', 'timesCard', 'roomsCard', 'teachersCard', 'noteCard', 'summaryCard', 'submitCard']
     .forEach((id) => { el(id).hidden = !chosen; });
   // A catalog written before it carried teachers has no such column at
   // all: the step is left out rather than claiming no teacher is registered.
@@ -734,6 +904,11 @@ function courseTeacherLabels() {
 const TYPE_LABELS = {
   fl: 'Fyrirlestrar', du: 'Dæmatímar', ae: 'Æfingatímar', vl: 'Verklegt',
   ut: 'Umræðutímar', hp: 'Verkefnatímar', ms: 'Málstofa', vs: 'Vinnustofa', tt: 'Tölvutímar'
+};
+
+// Two letters each, for the draft's blocks on a phone.
+const TYPE_SHORT = {
+  fl: 'Fl', du: 'Dæ', ae: 'Æf', vl: 'Vl', ut: 'Um', hp: 'Vk', ms: 'Ms', vs: 'Vs', tt: 'Tö'
 };
 
 // The same names with a soft hyphen where each may break, so the table's
