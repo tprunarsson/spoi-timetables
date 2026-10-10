@@ -1161,7 +1161,7 @@ function renderTerms() {
   const hint = el('termHint');
   if (hint) {
     hint.textContent = chosen
-      ? 'Óskirnar gilda fyrir ' + termLabel(chosen) + '.'
+      ? 'Athugasemdirnar gilda fyrir ' + termLabel(chosen) + '.'
       : 'Ekkert misseri skráð í námsframboði.';
   }
 }
@@ -1238,7 +1238,7 @@ async function submit() {
   // a successful answer that quietly never arrives.
   const ssn = el('ssn').value.replace(/[\s-]/g, '');
   if (!/^\d{10}$/.test(ssn)) {
-    setStatus('Sláðu inn kennitölu (10 tölustafir) - án hennar ratar óskin ekki á rétt námskeið.', 'err');
+    setStatus('Sláðu inn kennitölu (10 tölustafir) - án hennar rata athugasemdirnar ekki á rétt námskeið.', 'err');
     el('ssn').focus();
     return;
   }
@@ -1283,13 +1283,13 @@ async function submit() {
     });
     const body = await response.json();
     if (!body.ok) throw new Error(body.error || 'Óþekkt villa');
-    setStatus('Óskir vistaðar fyrir ' + termLabel(state.term) + '. Takk!', 'ok');
+    setStatus('Athugasemdir vistaðar fyrir ' + termLabel(state.term) + '. Takk!', 'ok');
   } catch (error) {
     // The write may well have landed even when the reply cannot be read -
     // say so rather than implying the answer was lost.
     setStatus(
       'Ekki tókst að staðfesta sendingu (' + error.message + '). '
-        + 'Athugaðu hvort óskin skilaði sér áður en þú sendir aftur.',
+        + 'Athugaðu hvort athugasemdirnar skiluðu sér áður en þú sendir aftur.',
       'err'
     );
   }
