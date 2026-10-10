@@ -1312,7 +1312,14 @@ el('course').addEventListener('change', onCourseChange);
 el('teachersNote').addEventListener('input', renderSummary);
 el('roomSearch').addEventListener('input', renderRoomSearch);
 el('courseSearch').addEventListener('input', () => renderCourseResults());
-el('courseSearch').addEventListener('focus', () => renderCourseResults());
+// Clicking into the box starts a new search: the chosen course's label is
+// cleared so every course is listed, rather than having to be deleted by
+// hand first. Leaving without picking puts it back (the blur below).
+el('courseSearch').addEventListener('focus', () => {
+  const selected = el('course').value;
+  if (selected && el('courseSearch').value === courseLabel(selected)) el('courseSearch').value = '';
+  renderCourseResults();
+});
 el('courseSearch').addEventListener('keydown', onCourseKeydown);
 // Half-typed text left in the box would claim a course that was never
 // selected, so leaving the field snaps it back to what is actually set.
