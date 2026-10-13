@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="is">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stundatöflur hafa flutt</title>
+<meta name="robots" content="noindex">
+<script>
+  // The site moved to https://spoi-hi.github.io. Same path, query and
+  // hash there - so a survey link (oskir/?school=von) or a timetable link
+  // lands on the same page.
+  (function () {
+    var path = location.pathname.replace(/^\/spoi-timetables/, '') || '/';
+    location.replace('https://spoi-hi.github.io' + path + location.search + location.hash);
+  })();
+</script>
+<meta http-equiv="refresh" content="2; url=https://spoi-hi.github.io/">
+</head>
+<body style="font-family: system-ui, sans-serif; padding: 40px; text-align: center;">
+  <p>Stundatöflur og athugasemdir kennara hafa flutt á
+    <a href="https://spoi-hi.github.io/">spoi-hi.github.io</a>.</p>
+  <p lang="en">The timetables and the teacher survey have moved to
+    <a href="https://spoi-hi.github.io/">spoi-hi.github.io</a>.</p>
+</body>
+</html>
